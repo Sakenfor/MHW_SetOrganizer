@@ -1,0 +1,371 @@
+1	Hunter's	pl002_0000	Chunk G0
+2	Leather	pl001_0000	Chunk G0
+3	Anja	pl020_0000	Chunk G0
+4	Jagras	pl008_0000	Chunk G0
+5	Bone	pl003_0000	Chunk G0
+6	Alloy	pl004_0000	Chunk G0
+9	Vespoid	pl007_0000	Chunk G0
+10	Kulu piece	pl009_0000	Chunk G0
+11	Pukei Hood	pl010_0000	Chunk G0
+12	Jyura	pl011_0000	Chunk G0
+13	Barroth	pl012_0000	Chunk G0
+14	Kadachi	pl013_0000	Chunk G0
+15	Chainmail	pl014_0000	Chunk G0
+18	Hornetaur	pl017_0000	Chunk G0
+20	King Beetle	pl019_0000	Chunk G0
+21	Rathian	pl021_0000	Chunk G0
+22	Girros Mask	pl022_0000	Chunk G0
+23	Tzitzi	pl023_0000	Chunk G0
+24	Lumu	pl024_0000	Chunk G0
+25	High Metal	pl025_0000	Chunk G0
+26	Death Stench	pl026_0000	Chunk G0
+27	Legiana	pl027_0000	Chunk G0
+28	Baan	pl028_0000	Chunk G0
+29	Odogaron	pl029_0000	Chunk G0
+31	Ingot	pl031_0000	Chunk G0
+33	Rathalos	pl033_0000	Chunk G0
+34	Diablos	pl034_0000	Chunk G0
+35	Kirin	pl035_0000	Chunk G0
+36	Brigade Lobos	pl036_0000	Chunk G0
+37	Pulverizing Feather	pl037_0000	Chunk G0
+39	Leather α	pl001_0000	Chunk G0
+40	Leather ß	pl001_0000	Chunk G0
+41	Hunter's α	pl002_0000	Chunk G0
+42	Hunter's ß	pl002_0010	Chunk G0
+43	Bone α	pl003_0000	Chunk G0
+44	Bone ß	pl003_0000	Chunk G0
+45	Alloy α	pl004_0000	Chunk G0
+46	Alloy ß	pl004_0000	Chunk G0
+51	Vespoid α	pl007_0000	Chunk G0
+52	Vespoid ß	pl007_0000	Chunk G0
+57	Hornetaur α	pl017_0000	Chunk G0
+58	Hornetaur ß	pl017_0000	Chunk G0
+61	Jagras α	pl008_0000	Chunk G0
+62	Jagras ß	pl008_0000	Chunk G0
+63	Kulu piece α	pl009_0000	Chunk G0
+64	Kulu piece ß	pl009_0000	Chunk G0
+65	Pukei Hood α	pl010_0000	Chunk G0
+66	Pukei Hood ß	pl010_0010	Chunk G0
+67	Jyura α	pl011_0000	Chunk G0
+68	Jyura ß	pl011_0000	Chunk G0
+69	Barroth α	pl012_0000	Chunk G0
+70	Barroth ß	pl012_0000	Chunk G0
+71	Kadachi α	pl013_0000	Chunk G0
+72	Kadachi ß	pl013_0000	Chunk G0
+73	Rathian α	pl021_0000	Chunk G0
+74	Rathian ß	pl021_0010	Chunk G0
+75	Girros Mask α	pl022_0000	Chunk G0
+76	Girros Mask ß	pl022_0000	Chunk G0
+77	Tzitzi α	pl023_0000	Chunk G0
+78	Tzitzi ß	pl023_0000	Chunk G0
+79	Lumu α	pl024_0000	Chunk G0
+80	Lumu ß	pl024_0000	Chunk G0
+81	Odogaron α	pl029_0000	Chunk G0
+82	Odogaron ß	pl029_0010	Chunk G0
+83	Dodogama α	pl039_0000	Chunk G0
+84	Dodogama ß	pl039_0000	Chunk G0
+85	Lavasioth α	pl040_0000	Chunk G0
+86	Lavasioth ß	pl040_0010	Chunk G0
+87	Rath Heart α	pl021_0100	Chunk G0
+88	Rath Heart ß	pl021_0110	Chunk G0
+89	High Metal α	pl025_0000	Chunk G0
+90	High Metal ß	pl025_0000	Chunk G0
+91	Ingot α	pl031_0000	Chunk G0
+92	Ingot ß	pl031_0000	Chunk G0
+93	Anja α	pl020_0000	Chunk G0
+94	Anja ß	pl020_0010	Chunk G0
+95	Legiana α	pl027_0000	Chunk G0
+96	Legiana ß	pl027_0010	Chunk G0
+97	Baan α	pl028_0000	Chunk G0
+98	Baan ß	pl028_0010	Chunk G0
+99	Vaal Hazak α	pl032_0000	Chunk G0
+100	Vaal Hazak ß	pl032_0010	Chunk G0
+101	Rathalos α	pl033_0000	Chunk G0
+102	Rathalos ß	pl033_0010	Chunk G0
+103	Diablos α	pl034_0000	Chunk G0
+104	Diablos ß	pl034_0010	Chunk G0
+105	Kirin α	pl035_0000	Chunk G0
+106	Kirin ß	pl035_0010	Chunk G0
+107	Nergigante α	pl030_0000	Chunk G0
+108	Nergigante ß	pl030_0010	Chunk G0
+109	Uragaan α	pl041_0000	Chunk G0
+110	Uragaan ß	pl041_0010	Chunk G0
+111	Rath Soul α	pl033_0100	Chunk G0
+112	Rath Soul ß	pl033_0110	Chunk G0
+113	Diablos Nero α	pl034_0100	Chunk G0
+114	Diablos Nero ß	pl034_0110	Chunk G0
+115	Bazel α	pl042_0000	Chunk G0
+116	Bazel ß	pl042_0010	Chunk G0
+117	King Beetle α	pl019_0000	Chunk G0
+118	King Beetle ß	pl019_0000	Chunk G0
+119	Brigade Lobos α	pl036_0000	Chunk G0
+120	Brigade Lobos ß	pl036_0000	Chunk G0
+121	Damascus α	pl043_0000	Chunk G0
+122	Damascus ß	pl043_0010	Chunk G0
+123	Dober α	pl044_0000	Chunk G0
+124	Dober ß	pl044_0000	Chunk G0
+125	Xeno'jiiva α	pl045_0000	Chunk G0
+126	Xeno'jiiva ß	pl045_0010	Chunk G0
+127	Kaiser α	pl046_0000	Chunk G0
+128	Kaiser ß	pl046_0010	Chunk G0
+129	Kushala α	pl047_0000	Chunk G0
+130	Kushala ß	pl047_0010	Chunk G0
+131	Death Stench α	pl026_0000	Chunk G0
+132	Death Stench ß	pl026_0000	Chunk G0
+133	Guild Cross α	pl048_0000	Chunk G0
+134	Guild Cross ß	pl048_0000	Chunk G0
+137	Zorah α	pl038_0000	Chunk G0
+138	Zorah ß	pl038_0010	Chunk G0
+145	Blossom Layered	pl074_0000	Chunk G0
+146	Diver Layered	pl075_0000	Chunk G0
+147	Chainmail α	pl014_0000	Chunk G0
+148	Chainmail ß	pl014_0000	Chunk G0
+149	Skull Mask α	pl054_0000	Chunk G0
+151	Commission Gorget α	pl053_0000	Chunk G0
+152	Commission Gorget ß	pl053_0000	Chunk G0
+153	Faux Felyne α	pl055_0000	Chunk G0
+154	Mosswine Mask α	pl056_0000	Chunk G0
+155	Brigade Layered	pl036_0000	Chunk G0
+156	Guild Cross Layered	pl048_0000	Chunk G0
+157	Harvest Layered	pl076_0000	Chunk G0
+158	Orion Layered	pl077_0000	Chunk G0
+159	Gala Suit Layered	pl078_0000	Chunk G0
+166	Gastodon α	pl015_0000	Chunk G0
+167	Gastodon ß	pl015_0000	Chunk G0
+168	Shamos	pl058_0000	Chunk G0
+169	Butterfly	pl019_0000	Chunk G0
+170	Butterfly α	pl019_0000	Chunk G0
+171	Butterfly ß	pl019_0000	Chunk G0
+174	Shamos α	pl058_0000	Chunk G0
+175	Shamos ß	pl058_0000	Chunk G0
+176	Origin	pl018_0000	Chunk G0
+181	Dragonseal Earrings α	pl059_0000	Chunk G0
+183	Strategist Spectacles α	pl060_0000	Chunk G0
+185	Dragonking Eyepatch α	pl061_0000	Chunk G0
+191	Kulve Taroth's Fury α	pl049_0000	Chunk G0
+192	Kulve Taroth's Fury ß	pl049_0010	Chunk G0
+193	Blossom	pl074_0000	Chunk G0
+194	Diver's Mask	pl075_0000	Chunk G0
+195	Harvest Flor	pl076_0000	Chunk G0
+196	Orion Cap	pl077_0000	Chunk G0
+197	Gala Suit	pl078_0000	Chunk G0
+200	Samurai	pl067_0000	Chunk G0
+201	Vangis α	pl050_0000	Chunk G0
+202	Vangis ß	pl050_0010	Chunk G0
+204	Bushi Kabuto "Sabi"	pl066_0000	Chunk G0
+205	Bushi Kabuto "Homare"	pl066_0010	Chunk G0
+206	Drachen Armet α	pl073_0000	Chunk G0
+207	Blossom α	pl074_0000	Chunk G0
+208	Diver's Mask α	pl075_0000	Chunk G0
+209	Harvest Flor α	pl076_0000	Chunk G0
+210	Orion Cap α	pl077_0000	Chunk G0
+211	Gala Suit Top α	pl078_0000	Chunk G0
+212	Butterfly	pl057_0000	Chunk G0
+213	Butterfly α	pl057_0000	Chunk G0
+214	Butterfly ß	pl057_0010	Chunk G0
+215	Queen Beetle	pl057_0000	Chunk G0
+216	Queen Beetle α	pl057_0000	Chunk G0
+217	Queen Beetle ß	pl057_0000	Chunk G0
+218	Vaal Hazak	pl032_0020	Chunk G0
+219	Kirin	pl035_0020	Chunk G0
+220	Kaiser	pl046_0020	Chunk G0
+221	Kushala	pl047_0020	Chunk G0
+222	Nergigante	pl030_0020	Chunk G0
+223	Zorah	pl038_0020	Chunk G0
+224	Xeno'jiiva	pl045_0020	Chunk G0
+225	HARDUMMY	pl068_0000	Chunk G0
+226	HARDUMMY	pl069_0000	Chunk G0
+227	HARDUMMY	pl069_0000	Chunk G0
+228	HARDUMMY	pl070_0000	Chunk G0
+229	Azure Starlord α	pl072_0000	Chunk G0
+230	Dante's Hair α	pl071_0000	Chunk G0
+231	Empress α	pl051_0000	Chunk G0
+232	Empress ß	pl051_0010	Chunk G0
+233	Sealed Eyepatch α	pl063_0000	Chunk G0
+234	Shadow Shades α	pl062_0000	Chunk G0
+235	Kulu-Ya-Ku α	pl065_0000	Chunk G0
+236	Wiggler α	pl064_0000	Chunk G0
+237	Butterfly Layered	pl117_0000	Chunk G0
+238	Death Stench Layered	pl026_0000	Chunk G0
+239	Dante Layered	pl071_0000	Chunk G0
+240	Drachen Layered Armet	pl073_0000	Chunk G0
+241	Commission Layered	pl053_0000	Chunk G0
+242	Origin Layered	pl018_0000	Chunk G0
+243	Beetle Layered	pl116_0000	Chunk G0
+244	dummy013	pl001_0000	Chunk G0
+245	Shadow Shades Layered	pl062_0000	Chunk G0
+246	Mosswine Mask Layered	pl056_0000	Chunk G0
+247	Faux Felyne Layered	pl055_0000	Chunk G0
+248	Sealed Eyepatch Layered Armor	pl063_0000	Chunk G0
+249	Wiggler Layered Armor	pl064_0000	Chunk G0
+250	Skull Mask Layered	pl054_0000	Chunk G0
+251	Kulu-Ya-Ku Layered	pl065_0000	Chunk G0
+253	Empress	pl051_0020	Chunk G0
+258	Kulve Taroth's Fury	pl049_0020	Chunk G0
+259	Defender α	pl121_0000	Chunk G0
+291	HARDUMMY	pl069_0000	Chunk G0
+292	HARDUMMY	pl070_0000	Chunk G0
+293	Geralt's α	pl118_0000	Chunk G0
+294	Ciri's α	pl/f_equip/pl119_0000	Chunk G0
+295	Geralt Layered	pl118_0000	Chunk G0
+296	Ciri Layered	pl/f_equip/pl119_0000	Chunk G0
+297	Bayek Layered	pl120_0000	Chunk G0
+298	HARDUMMY	pl068_0000	Chunk G0
+299	HARDUMMY	pl068_0000	Chunk G0
+300	Direwolf Layered +	pl105_0000	Chunk G0
+302	Bone α+	pl003_0000	Chunk G0
+303	Bone ß+	pl003_0000	Chunk G0
+304	Alloy α+	pl004_0000	Chunk G0
+305	Alloy ß+	pl004_0000	Chunk G0
+306	Vespoid α+	pl007_0001	Chunk G0
+307	Vespoid ß+	pl007_0001	Chunk G0
+308	Hornetaur α+	pl017_0001	Chunk G0
+309	Hornetaur ß+	pl017_0001	Chunk G0
+314	Shamos α+	pl058_0000	Chunk G0
+315	Shamos ß+	pl058_0000	Chunk G0
+316	Gastodon α+	pl015_0000	Chunk G0
+317	Gastodon ß+	pl015_0000	Chunk G0
+320	Wulg Scarf α+	pl102_0000	Chunk G0
+321	Wulg Scarf ß+	pl102_0000	Chunk G0
+324	Jagras α+	pl008_0001	Chunk G0
+325	Jagras ß+	pl008_0001	Chunk G0
+326	Tzitzi α+	pl023_0001	Chunk G0
+327	Tzitzi ß+	pl023_0001	Chunk G0
+328	Girros α+	pl022_0001	Chunk G0
+329	Girros ß+	pl022_0001	Chunk G0
+330	Dodogama α+	pl039_0001	Chunk G0
+331	Dodogama ß+	pl039_0001	Chunk G0
+332	Kulu piece α+	pl009_0001	Chunk G0
+333	Kulu piece ß+	pl009_0001	Chunk G0
+334	Pukei α+	pl010_0001	Chunk G0
+335	Pukei ß+	pl010_0001	Chunk G0
+336	Barroth α+	pl012_0001	Chunk G0
+337	Barroth ß+	pl012_0001	Chunk G0
+338	Jyura α+	pl011_0001	Chunk G0
+339	Jyura ß+	pl011_0001	Chunk G0
+340	Beo α+	pl110_0000	Chunk G0
+341	Beo ß+	pl110_0000	Chunk G0
+342	Kadachi α+	pl013_0001	Chunk G0
+343	Kadachi ß+	pl013_0001	Chunk G0
+344	High Metal α+	pl025_0000	Chunk G0
+345	High Metal ß+	pl025_0000	Chunk G0
+346	Banbaro α+	pl084_0000	Chunk G0
+347	Banbaro ß+	pl084_0010	Chunk G0
+348	Anja α+	pl020_0001	Chunk G0
+349	Anja ß+	pl020_0011	Chunk G0
+350	Rathian α+	pl021_0001	Chunk G0
+351	Rathian ß+	pl021_0011	Chunk G0
+352	Rath Heart α+	pl021_0101	Chunk G0
+353	Rath Heart ß+	pl021_0111	Chunk G0
+354	Lumu α+	pl024_0001	Chunk G0
+355	Lumu ß+	pl024_0001	Chunk G0
+356	Lumu Phantasm α+	pl024_0101	Chunk G0
+357	Lumu Phantasm ß+	pl024_0101	Chunk G0
+358	Pukei Lagoon α+	pl010_0101	Chunk G0
+359	Pukei Lagoon ß+	pl010_0101	Chunk G0
+360	Viper Kadachi α+	pl013_0101	Chunk G0
+361	Viper Kadachi ß+	pl013_0101	Chunk G0
+362	Baan α+	pl028_0001	Chunk G0
+363	Baan ß+	pl028_0001	Chunk G0
+374	Acrobat Earrings α+	pl095_0000	Chunk G0
+378	Ingot α+	pl031_0000	Chunk G0
+379	Ingot ß+	pl031_0000	Chunk G0
+380	Barioth α+	pl089_0000	Chunk G0
+381	Barioth ß+	pl089_0010	Chunk G0
+382	Rathalos α+	pl033_0001	Chunk G0
+383	Rathalos ß+	pl033_0011	Chunk G0
+384	Diablos α+	pl034_0001	Chunk G0
+385	Diablos ß+	pl034_0011	Chunk G0
+386	Legiana α+	pl027_0001	Chunk G0
+387	Legiana ß+	pl027_0011	Chunk G0
+388	Odogaron α+	pl029_0001	Chunk G0
+389	Odogaron ß+	pl029_0011	Chunk G0
+390	Lavasioth α+	pl040_0001	Chunk G0
+391	Lavasioth ß+	pl040_0001	Chunk G0
+392	Uragaan α+	pl041_0001	Chunk G0
+393	Uragaan ß+	pl041_0001	Chunk G0
+394	Nargacuga α+	pl080_0000	Chunk G0
+395	Nargacuga ß+	pl080_0010	Chunk G0
+396	Glavenus α+	pl081_0000	Chunk G0
+397	Glavenus ß+	pl081_0010	Chunk G0
+398	Brachydios α+	pl082_0000	Chunk G0
+399	Brachydios ß+	pl082_0010	Chunk G0
+400	Tigrex α+	pl083_0000	Chunk G0
+401	Tigrex ß+	pl083_0010	Chunk G0
+402	Fulgur α+	pl020_0101	Chunk G0
+403	Fulgur ß+	pl020_0111	Chunk G0
+406	Black Belt α+	pl093_0000	Chunk G0
+407	Black Belt ß+	pl093_0000	Chunk G0
+408	Dragonking Eyepatch Layered Armor	pl061_0000	Chunk G0
+409	Strategist Spectacles Layered Armor	pl060_0000	Chunk G0
+410	Pulverizing Feather Layered Armor	pl037_0000	Chunk G0
+413	Hoarcry α+	pl027_0500	Chunk G0
+414	Hoarcry ß+	pl027_0510	Chunk G0
+415	Rath Soul α+	pl033_0101	Chunk G0
+416	Rath Soul ß+	pl033_0111	Chunk G0
+417	Diablos Nero α+	pl034_0101	Chunk G0
+418	Diablos Nero ß+	pl034_0111	Chunk G0
+419	Death Garon α+	pl029_0101	Chunk G0
+420	Death Garon ß+	pl029_0111	Chunk G0
+421	Acidic Glavenus α+	pl081_0100	Chunk G0
+422	Acidic Glavenus ß+	pl081_0110	Chunk G0
+423	Artian α+	pl091_0000	Chunk G0
+424	Artian ß+	pl091_0000	Chunk G0
+428	Dober α+	pl044_0000	Chunk G0
+429	Dober ß+	pl044_0000	Chunk G0
+430	Damascus α+	pl043_0000	Chunk G0
+431	Damascus ß+	pl043_0010	Chunk G0
+432	Rimeguard α+	pl085_0000	Chunk G0
+433	Rimeguard ß+	pl085_0010	Chunk G0
+434	Pride α+	pl042_0500	Chunk G0
+435	Pride ß+	pl042_0510	Chunk G0
+436	Fellshroud α+	pl032_0500	Chunk G0
+437	Fellshroud ß+	pl032_0510	Chunk G0
+438	Kaiser α+	pl046_0001	Chunk G0
+439	Kaiser ß+	pl046_0011	Chunk G0
+440	Kushala α+	pl047_0001	Chunk G0
+441	Kushala ß+	pl047_0011	Chunk G0
+442	Kirin α+	pl035_0001	Chunk G0
+443	Kirin ß+	pl035_0011	Chunk G0
+444	Tentacle Cowl α+	pl086_0000	Chunk G0
+445	Tentacle Cowl ß+	pl086_0010	Chunk G0
+448	Guild Palace α+	pl094_0000	Chunk G0
+449	Guild Palace ß+	pl094_0000	Chunk G0
+450	Clockwork α+	pl104_0000	Chunk G0
+451	Clockwork ß+	pl104_0010	Chunk G0
+452	Crystal Earring Layered Armor	pl059_0000	Chunk G0
+453	Ruinous α+	pl030_0500	Chunk G0
+454	Ruinous ß+	pl030_0510	Chunk G0
+455	Shara Ishvalda α+	pl088_0000	Chunk G0
+456	Shara Ishvalda ß+	pl088_0010	Chunk G0
+457	Esurient α+	pl050_0500	Chunk G0
+458	Esurient ß+	pl050_0510	Chunk G0
+461	Guildwork α+	pl092_0000	Chunk G0
+462	Guildwork ß+	pl092_0000	Chunk G0
+463	Showman Earrings α+	pl095_0010	Chunk G0
+464	Golden α+	pl021_0200	Chunk G0
+465	Golden ß+	pl021_0210	Chunk G0
+466	Silver α+	pl033_0200	Chunk G0
+467	Silver ß+	pl033_0210	Chunk G0
+470	Zinogre α+	pl107_0000	Chunk G0
+471	Zinogre ß+	pl107_0010	Chunk G0
+474	Garuga α+	pl108_0000	Chunk G0
+475	Garuga ß+	pl108_0010	Chunk G0
+476	Zorah α+	pl038_0000	Chunk G0
+477	Zorah ß+	pl038_0010	Chunk G0
+488	Sealed Dragon Cloth α+	pl100_0000	Chunk G0
+489	Wyverian Ears α+	pl101_0000	Chunk G0
+491	Duffel Penguin Mask α+	pl098_0000	Chunk G0
+492	Empress α+	pl051_0001	Chunk G0
+493	Empress ß+	pl051_0011	Chunk G0
+502	Oolong α+	pl127_0000	Chunk G0
+504	Astral α+	pl128_0000	Chunk G0
+509	Oolong Layered	pl127_0000	Chunk G0
+510	Astral Layered	pl128_0000	Chunk G0
+512	Thermae Layered	pl106_0000	Chunk G0
+515	Pearlspring α+	pl113_0000	Chunk G0
+518	Rex α+	pl083_0100	Chunk G0
+519	Rex ß+	pl083_0110	Chunk G0
+520	Guardian α+	pl121_0000	Chunk G0
+521	Yukumo Layered	pl122_0000	Chunk G0
+522	Silver Knight Layered	pl123_0000	Chunk G0
