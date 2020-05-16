@@ -67,7 +67,7 @@ class ctc_copy_sources(PropertyGroup):
     filter_chain=BoolProperty(default=1)
     filter_frame=BoolProperty(default=1)
     filter_bone=BoolProperty(default=1)
-    info_when_closed=BoolProperty()
+    info_when_closed=BoolProperty(description='Show some properties even if tab of object is closed')
     
 class mhwExpSet(PropertyGroup):
     name=StringProperty()
@@ -380,7 +380,7 @@ def CopyCTC(self,context,copy_from):
             if i.empty_root==target:the_set=i
     else:
         the_set=_set
-        
+    header_tar=_set.ctc_header if _set.ctc_header!=None else None
     if copy_from=='Local':
         source=mhw.header_copy_source
     else:
@@ -388,6 +388,7 @@ def CopyCTC(self,context,copy_from):
         blendf,src_real=src.split('.blend__')
         portscene='ext_%s'%blendf
         srcol=mhw.extctc_src[src]
+        
         if bpy.data.objects.get(src)==None: #TODO, add toggle to reload-refresh
             with bpy.data.libraries.load(srcol.blend, link=True) as (data_from, data_to):
                 data_to.objects = [name for name in data_from.objects]
@@ -440,7 +441,9 @@ def CopyCTC(self,context,copy_from):
         return
     scene.update()
     scene=context.scene
-
+    
+    
+    
     if not any(s.source==source for s in _set.ctc_copy_src):
         ctc_col=_set.ctc_copy_src.add()
         ctc_col.name=source.name
@@ -474,6 +477,8 @@ def CopyCTC(self,context,copy_from):
             nodebone=pco.target
             total_list.insert(0,nodebone)
             max_id2=nodebone['boneFunction']
+        if header_tar==None and o.get('Type') and o['Type']=='CTC':
+            header_tar=o
     order=total_list[:]
     total_list=sorted(list(set(total_list)),key=lambda x:order.index(x))
     #remove doubles,preserve sort order, crucial else parenting is messed, is a current flaw ^
@@ -489,6 +494,12 @@ def CopyCTC(self,context,copy_from):
         if o==None:continue
         if o.get('Type') and regular_ctc_names.get(o['Type']):tty=regular_ctc_names[o['Type']]
         else:tty='Bone'
+        
+        if header_tar!=None and header_tar!=o and tty=='Header':
+            _o2=ctcO(tty=tty,o=o,o2=header_tar)
+            ctctrack[o]=_o2
+            o2track=ob_in_track(ctc_col,o,source,target,header_tar)
+            continue
         
         if text_new=='':
             obn='%s%s'%(text_prep,o.name)
@@ -588,7 +599,7 @@ def CopyCTC(self,context,copy_from):
     bones=ctcO.obs['Bone']
     nodes=ctcO.obs['Node']
     frames=ctcO.obs['Frame']
-
+    if _set.ctc_header==None:_set.ctc_header=_set.ctc_header=list(ctcO.obs['Header'].values())[0].o2
     for bo in bones: #Check for missing parenting
         _bo=ctcO.obs['Bone'][bo]
         if _bo.o2==None:continue 
@@ -670,7 +681,7 @@ class dpMHW_panel(bpy.types.Panel):
                 for ex in mhw.extctc_src:
                     row=box.row()
                     row.label(ex.folder+ex.blend,icon='FILE_FOLDER')
-                    row.label(ex.name)
+                    row.label(ex.name.split('__')[1])
         row=sbox.row()
         row=layout.row()
         sbox=row.box()
