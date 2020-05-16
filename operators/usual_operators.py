@@ -30,10 +30,11 @@ class SimpleConfirmOperator(Operator):
         if delhow=='delete_ctc':
             for o in [a for a in to_rem.copy_src_track if a.is_new]:
                 if o.o2!=None:bpy.data.objects.remove(o.o2)
-
+            self.report({'INFO'},'Removed a CTC Copy Set: %s'%to_rem.source.name)
         delwhat.remove(delnum)
         scene.update()
-
+        
+        return {'FINISHED'}
  
 
     def invoke(self, context, event):

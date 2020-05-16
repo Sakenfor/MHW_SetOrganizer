@@ -102,9 +102,20 @@ prop_edit_list={'CTC_*_Frame':
 ['boneFunction','unkn2'],
 'CTC_Node':[]
 }
+
+props_info_closed={'CTC_*_Frame':[],
+'CTC':[],
+'CTC_Chain':['Snapping','Tension','Weightiness'],
+'Bone':['boneFunction'],
+'CTC_Node':[],
+}
+
 props_icons={'Snapping':'FORCE_HARMONIC',
 'Tension':'FORCE_TURBULENCE',
-'Wind Multiplier':'FORCE_WIND',
+'Wind Multiplier':'FORCE_WIND','boneFunction':'FONT_DATA',
+'Weightiness':'MOD_VERTEX_WEIGHT',
+'Cone of Motion':'MESH_CONE',
+'Gravity Multiplier':'FORCE_CHARGE',
 
 }
 
