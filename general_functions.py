@@ -157,6 +157,13 @@ def ob_in_track(mhw,caster,add_src=None,armature=None,o2=None,report=None):
         #print('New object track %s'%ob.name)
         return nob
     return None
+
+def ctc_copy_over_props(self,context,col):
+    for o in col.copy_src_track:
+        copy_props(o.caster,o.o2)
+        if o.id_name!='':
+            o.o2[o.id_name]=o.changed_id if o.changed_id!=0 else o.bone_id
+    self.report({'INFO'},'Succesfully copied properties, preserving the altered boneFunctions, if there were any')
 infos={'obj_info':
 '''You can put capsules in objects list too.
 Use black dot to toggle export on/off of per object.
@@ -190,5 +197,11 @@ Best to use some text to easier tell apart the CTC's.
 Update internal names of ctc edit collection, useful for the "Pick" prop search only ATM.
 
 Can freely edit object names with that being said.
+'''
+,'ctc_copy_over_props':
+'''
+Copying the props from sources, will preserve
+the shifted boneFunctions if there are any, on Frame and Bone.
+
 '''
  }

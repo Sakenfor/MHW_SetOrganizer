@@ -47,7 +47,7 @@ class ob_copy_track(PropertyGroup):
     bone_id=IntProperty(default=0)
     changed_id=IntProperty(default=0)
     VG=CollectionProperty(type=ob_copy_VG)
-        
+    id_name=StringProperty()
     #vertex_group=PointerProperty(type=bpy.types.VertexGroup)
 class ctc_copy_sources(PropertyGroup):
     name=StringProperty()
@@ -425,13 +425,7 @@ def CopyCTC(self,context,copy_from):
         bone_additional=list(set([a for a in bone_additional if a!=None and 'boneFunction' in a]))
         for h in bone_additional+src_heir:
             try:
-                # if h.constraints.get('Bone Function') and h.constraints['Bone Function'].target!=None:
-                    # try:
-                        # sob.link(h.constraints['Bone Function'].target)
-                    # except:
-                        # pass
                 sob.link(h)
-                pa=h.parent
             except:
                 pass
 
@@ -441,8 +435,6 @@ def CopyCTC(self,context,copy_from):
         return
     scene.update()
     scene=context.scene
-    
-    
     
     if not any(s.source==source for s in _set.ctc_copy_src):
         ctc_col=_set.ctc_copy_src.add()
@@ -457,16 +449,14 @@ def CopyCTC(self,context,copy_from):
     _src=all_heir(source)
     
     fmax=max(list(arma[a] for a in arma if arma[a]!=None))+1
-    parent_track,newbonestrack,ctctrack,arma_re_by_source={},{},{},{}
+    ctctrack={}
     
     text_prep,text_new=mhw.header_copy_name,mhw.header_new_names
     _obs=bpy.data.objects
     count_types={'Bone':1,'Header':1,'Frame':1,'Chain':1,'Node':1}
-    
+    ctcO.obs={'Bone':{},'Header':{},'Frame':{},'Chain':{},'Node':{}}
     total_list=bone_additional+_src
     
-
-    ctcO.obs={'Bone':{},'Header':{},'Frame':{},'Chain':{},'Node':{}}
     for isr,o in enumerate(_src ):
         if o.get('Type') and o['Type']=='CTC_Node':
             pco=[a for a in o.constraints if a.type=='CHILD_OF']
@@ -544,6 +534,7 @@ def CopyCTC(self,context,copy_from):
         b_ids[o_id]=o2track
         if 1+1==2:
             if tty=='Bone':
+                o2track.id_name='boneFunction'
                 if o_id >= 150 and arma_re.get(o_id)!=None and o2track.is_new==1:
                     #shift the boneFunction,but only if it was not before
                     
@@ -596,11 +587,14 @@ def CopyCTC(self,context,copy_from):
         if tty=='Frame':
             bbo=b_ids[o['boneFunctionID']]
             o2['boneFunctionID']=bbo.bone_id if bbo.changed_id==0 else bbo.changed_id
-            
+            o2track.changed_id=bbo.changed_id
+            o2track.id_name='boneFunctionID'
     bones=ctcO.obs['Bone']
     nodes=ctcO.obs['Node']
     frames=ctcO.obs['Frame']
-    if _set.ctc_header==None:_set.ctc_header=_set.ctc_header=list(ctcO.obs['Header'].values())[0].o2
+    if _set.ctc_header==None:
+        _set.ctc_header=list(ctcO.obs['Header'].values())[0].o2
+        self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
     for bo in bones: #Check for missing parenting
         _bo=ctcO.obs['Bone'][bo]
         if _bo.o2==None:continue 
@@ -616,6 +610,7 @@ def CopyCTC(self,context,copy_from):
         if _o2==None:continue
         if nodes[node].con==None:
             self.report({'WARNING'},'%s - could not find constraint.'%nodes[node].o.name)
+            continue
         orig_tar=nodes[node].con.target
         fnewbone=[a for a  in bones if bones[a].o==orig_tar]
         if fnewbone==[]:continue
@@ -867,7 +862,12 @@ class dpMHW_panel(bpy.types.Panel):
                             hall.func,hall.var1='ctc_edit_col_edit','{ctcnum}|{setnum}|Update'.format(ctcnum=_i,setnum=mhw.oindex)
                             help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="") 
                             help1.var1,help1.func='ctc_edit_update','show_info'
+                            row=bo2.row(align=1)
                             row.prop(i,'info_when_closed',icon='WORDWRAP_ON',text='UnexpandedInfo')
+                            vupd=row.operator('scene.dpmhw_button',text='Copy Props from Sources',icon='OOPS')
+                            vupd.func,vupd.var1,vupd.confirmer='ctc_copy_over_props','scene.'+i.path_from_id(),1
+                            help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="") 
+                            help1.var1,help1.func='ctc_copy_over_props','show_info'
                             if i.view_mode=='List View': #Not much useful for now, probably can find use in future
                             
                                 row=bbo.row()
@@ -894,12 +894,15 @@ class dpMHW_panel(bpy.types.Panel):
                                     if _o==None:continue
                                     row.label(icon=types_icons[x.ttype])
                                     
-                                    row.prop(_o,'name',text='')
+                                    row.prop(_o,'name',text='' if x.ttype=='Bone' else '')
+                                    
                                     if i.info_when_closed and not x.edit_view:
                                         for pii,prop in enumerate(props_info_closed[x.ttype]):
-                                            addstr='' if x.changed_id==0 else '(old ID: %s)'%x.bone_id
-                                            row.label(str(round(_o[prop],2))+addstr,icon=props_icons[prop]) if props_icons.get(prop) else row.label(_o[prop])
-
+                                            
+                                            row.label(str(round(_o[prop],2)),icon=props_icons[prop]) if props_icons.get(prop) else row.label(_o[prop])
+                                    if x.ttype=='Bone' and not i.info_when_closed:
+                                        idtext=' %s'%('%s (%s)'%(x.changed_id,x.bone_id) if x.changed_id!=0 else x.bone_id)
+                                        row.label(idtext)
                                     if len(x.VG)>0:
                                         row.label(str(len(x.VG)),icon='GROUP_VERTEX')
                                         vupd=row.operator('scene.dpmhw_button',text='',icon='STICKY_UVS_VERT')
@@ -1053,6 +1056,9 @@ class dpmhwButton(Operator):
             for o in [a for a in col.copy_src_track if a.ttype=='Bone']:
                self.update_vg_names(o) 
             self.report({'INFO'},'Succesfully updated vertex groups names by the Bone(empty) names')
+        elif self.func=='ctc_copy_over_props':
+            col=eval(self.var1)
+            ctc_copy_over_props(self,context,col)
         return {'FINISHED'}
         
 
