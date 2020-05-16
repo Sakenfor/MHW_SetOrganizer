@@ -13,7 +13,7 @@ from operators import usual_operators
 from operators.usual_operators import *
 importlib.reload(dpmhw_arrangers)
 importlib.reload(usual_operators)
-
+from re import findall
 from bpy.props import EnumProperty,StringProperty,BoolProperty,FloatProperty,IntProperty,CollectionProperty,PointerProperty
 from bpy.types import PropertyGroup,Operator
 from mathutils import Matrix
@@ -516,7 +516,8 @@ def CopyCTC(self,context,copy_from):
                     o2=o2track.o2
                 else:
                     new=1
-
+                    rem_num=findall(r'\.[0-9]*',obn)
+                    if rem_num:obn=obn.replace(rem_num[0],'')
                     if _obs.get(obn):
                         nnum=1
                         while _obs.get(obn+'.%03d'%nnum):
@@ -884,7 +885,7 @@ class dpMHW_panel(bpy.types.Panel):
                                     row.prop(_o,'name',text='')
                                     if i.info_when_closed and not x.edit_view:
                                         for pii,prop in enumerate(props_info_closed[x.ttype]):
-                                            addstr='' if x.changed_id==0 else '(!)'
+                                            addstr='' if x.changed_id==0 else '(old ID: %s)'%x.bone_id
                                             row.label(str(round(_o[prop],2))+addstr,icon=props_icons[prop]) if props_icons.get(prop) else row.label(_o[prop])
 
                                     if len(x.VG)>0:
