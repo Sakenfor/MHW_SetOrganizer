@@ -498,7 +498,8 @@ def CopyCTC(self,context,copy_from):
         if header_tar!=None and header_tar!=o and tty=='Header':
             _o2=ctcO(tty=tty,o=o,o2=header_tar)
             ctctrack[o]=_o2
-            o2track=ob_in_track(ctc_col,o,source,target,header_tar)
+            o2track=ob_in_track(ctc_col,o,armature=target,report=self)
+            if o2track==None:ob_in_track(ctc_col,o,source,target,header_tar)
             continue
         
         if text_new=='':
