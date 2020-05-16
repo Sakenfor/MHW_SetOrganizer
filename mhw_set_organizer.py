@@ -68,6 +68,7 @@ class ctc_copy_sources(PropertyGroup):
     filter_frame=BoolProperty(default=1)
     filter_bone=BoolProperty(default=1)
     info_when_closed=BoolProperty()
+    
 class mhwExpSet(PropertyGroup):
     name=StringProperty()
     oindex=IntProperty()
@@ -552,10 +553,11 @@ def CopyCTC(self,context,copy_from):
                 o2.parent=_o2.parent
             except:
                 pass
+            copy_various_props(o,o2)
             if tty=='Bone':
                 o2.matrix_world=o.matrix_world
                 o2['boneFunction']=o2track.changed_id if o2track.changed_id!=0 else o2track.bone_id #overwrite copied Bone props in case boneFunction was shifted
-            copy_various_props(o,o2)
+            
             if mhw.ctc_copy_add_LR:
 
                 if not any(o2.name.endswith(x) for x in ['.L','.R']):
@@ -882,7 +884,8 @@ class dpMHW_panel(bpy.types.Panel):
                                     row.prop(_o,'name',text='')
                                     if i.info_when_closed and not x.edit_view:
                                         for pii,prop in enumerate(props_info_closed[x.ttype]):
-                                            row.label(str(round(_o[prop],2)),icon=props_icons[prop]) if props_icons.get(prop) else row.label(_o[prop])
+                                            addstr='' if x.changed_id==0 else '(!)'
+                                            row.label(str(round(_o[prop],2))+addstr,icon=props_icons[prop]) if props_icons.get(prop) else row.label(_o[prop])
 
                                     if len(x.VG)>0:
                                         row.label(str(len(x.VG)),icon='GROUP_VERTEX')
