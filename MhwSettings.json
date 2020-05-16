@@ -1,0 +1,25 @@
+{
+ "CherrySet.blend": {
+  "Bases": {},
+  "Bone": {},
+  "Cherry": {},
+  "Legiana": {},
+  "Lumu": {},
+  "Pukei": {}
+ },
+ "Global Settings": {
+  "BlendAppendPaths": [
+   "F:\\Modding_MHW\\",
+   "F:\\Modding_MHW\\",
+   "F:\\Modding_MHW\\",
+   "F:\\Modding_MHW\\",
+   "F:\\Modding_MHW\\",
+   "F:\\Modding_MHW\\"
+  ],
+  "gamepath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Monster Hunter World\\"
+ },
+ "untitled.blend": {
+  "Scene": {},
+  "test": {}
+ }
+}

@@ -101,7 +101,6 @@ class dpMHWSetArranger(bpy.types.Operator):
             ('DOWN', "Down", ""),
             ('REMOVE', "Remove", ""),
             ('ADD', "Add", ""),
-            ('BATCHADD', "Batch Add", ""),
             ))
     
     def invoke(self, context, event):
@@ -145,18 +144,6 @@ class dpMHWSetArranger(bpy.types.Operator):
                 info = '"%s" added to list' % (item.name)
                 self.report({'INFO'}, info)
     
-        elif self.action == 'BATCHADD':
-            for o in bpy.context.selected_objects:
-                if aktse.eobjs.get(o.name)==None:
-                    item = aktse.eobjs.add()
-                    item.name = o.name
-                    item.obj_type = "STRING"
-                    # item.kind=o.type
-                    item.obj_id = len(aktse.eobjs)
-                    _set.oindex = len(aktse.eobjs)-1
-                    info = '"%s" added to list' % (item.name)
-                    self.report({'INFO'}, info)
-
         return {"FINISHED"}
 
 class dpMHW_drawSet(bpy.types.UIList):
@@ -183,11 +170,70 @@ class dpMHW_drawObjSet(bpy.types.UIList):
         pass 
 
 
+#--------------Blender Append --------------
+class dpMHW_drawBlenderAppend(bpy.types.UIList):
+    """Set drawing"""
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.prop(item, "path", text="", emboss=False, icon_value=icon)
+    def invoke(self, context, event):        
+        pass  
+class dpMHWBlenderAppendArranger(bpy.types.Operator):
+    """Move items up and down, add and remove"""
+    bl_idname = "scene.dpmhw_blender_append_arranger"
+    bl_label = "BlenderAppendArranger"
+    bl_description = "Move items up and down, add and remove"
+    bl_options = {'REGISTER'}
+    who=bpy.props.StringProperty()
+    action = bpy.props.EnumProperty(
+            items=(
+            ('UP', "Up", ""),
+            ('DOWN', "Down", ""),
+            ('REMOVE', "Remove", ""),
+            ('ADD', "Add", ""),
+            ))
+    
+    def invoke(self, context, event):
+        scn = context.scene
+        ET=aktse=scn.mhwsake
+        scene=context.scene
+        idx = ET.oindex_blend
+        try:
+            item = aktse.append_dirs[idx]
+        except IndexError:
+            pass
+        else:
+            if self.action == 'DOWN' and idx < len(aktse.append_dirs) - 1:
+                item_next = aktse.append_dirs[idx+1].name
+                aktse.append_dirs.move(idx, idx+1)
+                ET.oindex_blend += 1
+                info = 'Item "%s" moved to position %d' % (item.name, ET.oindex_blend + 1)
+                self.report({'INFO'}, info)
 
+            elif self.action == 'UP' and idx >= 1:
+                item_prev = aktse.append_dirs[idx-1].name
+                aktse.append_dirs.move(idx, idx-1)
+                ET.oindex_blend -= 1
+                info = 'Item "%s" moved to position %d' % (item.name, ET.oindex_blend + 1)
+                self.report({'INFO'}, info)
 
+            elif self.action == 'REMOVE':
+                info = 'Item "%s" removed from list' % (aktse.append_dirs[idx].name)
+                ET.oindex_blend -= 1
+                aktse.append_dirs.remove(idx)
+                self.report({'INFO'}, info)
+            
+        if self.action == 'ADD':   
+            
+                item = aktse.append_dirs.add()
+                item.name = 'New Set'
+                item.obj_type = "STRING"
+                ET.oindex_blend= len(aktse.append_dirs)-1             
+                info = '"%s" added to list' % (item.name)
+                self.report({'INFO'}, info)
+    
+        return {"FINISHED"}
 
-
-
+#--------------Sets of Sets --------------
 class dpMHWSetOfSetsArranger(bpy.types.Operator):
     """Move items up and down, add and remove"""
     bl_idname = "scene.dpmhw_setofsets_arranger"
@@ -259,9 +305,7 @@ class dpMHWSetOfSetsObjArranger(bpy.types.Operator):
             ('DOWN', "Down", ""),
             ('REMOVE', "Remove", ""),
             ('ADD', "Add", ""),
-            #('BATCHADD', "Batch Add", ""),
             ))
-            # ('FROMOLD', "Fromold", "")))   
     
     def invoke(self, context, event):
         scn = context.scene
@@ -333,8 +377,10 @@ class dpMHW_drawSetOfSetsObjs(bpy.types.UIList):
 
     def invoke(self, context, event):        
         pass 
+
 cls=[dpMHWSetObjArranger,dpMHWSetArranger,dpMHW_drawSet,dpMHW_drawObjSet,
-dpMHW_drawSetOfSets,dpMHW_drawSetOfSetsObjs,dpMHWSetOfSetsArranger,dpMHWSetOfSetsObjArranger]
+dpMHW_drawSetOfSets,dpMHW_drawSetOfSetsObjs,dpMHWSetOfSetsArranger,dpMHWSetOfSetsObjArranger,
+dpMHWBlenderAppendArranger,dpMHW_drawBlenderAppend]
 
 def register():
     for cl in cls:
