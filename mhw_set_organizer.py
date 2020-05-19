@@ -565,7 +565,6 @@ def CopyCTC(self,context,copy_from):
                 else:
                     new=1
                     rem_num=findall(r'\.[0-9]*',obn)
-                    
                     if rem_num and rem_num[0]!='.':obn=obn.replace(rem_num[0],'')
                     #self.report({'INFO'},str(rem_num)+' %s %s'%(o.name,obn))
                     if _obs.get(obn):
