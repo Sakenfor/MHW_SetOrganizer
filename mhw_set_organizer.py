@@ -542,7 +542,7 @@ def CopyCTC(self,context,copy_from):
             count_types[tty]+=1
         if tty not in o.name:obn='%s_%s'%(tty,obn) if not mhw.type_infront else '%s_%s'%(obn,tty)
         new,o2=0,None
-        o_id=o.get('boneFunction')
+        o_id=o_id_b=o.get('boneFunction')
         
         o2track=ob_in_track(ctc_col,o,armature=target,report=self)
         bone_already=0
@@ -575,7 +575,7 @@ def CopyCTC(self,context,copy_from):
                     o2=new_ob(obn)
                     o2track=ob_in_track(ctc_col,o,source,target,o2)
         o2track.is_new=new
-        _o2=ctcO(tty=tty,o=o,o2=o2,bid=o_id)
+        _o2=ctcO(tty=tty,o=o,o2=o2,bone_id=o_id)
         ctctrack[o]=_o2
         if o_id!=None:o2track.bone_id=o_id
         b_ids[o_id]=o2track
@@ -616,7 +616,7 @@ def CopyCTC(self,context,copy_from):
                 o2['boneFunction']=o2track.changed_id if o2track.changed_id!=0 else o2track.bone_id #overwrite copied Bone props in case boneFunction was shifted
                 ntrack=o2.name
                 scene.update()
-            if mhw.ctc_copy_add_LR:
+            if o_id_b!=None and mhw.ctc_copy_add_LR and o_id_b>150:
 
                 if  all(not o2.name.endswith(x) for x in ['.L','.R']):
                     tbone_X=o2.matrix_world.to_translation()[0]
@@ -624,7 +624,7 @@ def CopyCTC(self,context,copy_from):
                     o2.name=o2.name.replace('.R','').replace('.L','')
                     if tbone_X<0:o2.name=o2.name+'.R'
                     elif tbone_X>0:o2.name=o2.name+'.L'
-                if ntrack!=o2.name and tty=='Bone' and o['boneFunction']<150:
+                if ntrack!=o2.name and tty=='Bone' and o_id_b<150:
                     for i in [a for a in _set.eobjs if a.obje !=None]:
                         if i.obje.vertex_groups.get(ntrack):i.obje.vertex_groups.remove(group=i.obje.vertex_groups[ntrack])
             
@@ -682,7 +682,7 @@ def CopyCTC(self,context,copy_from):
         cons.target=bones[bonefind.o].o2
         cons.inverse_matrix =nodes[node].o.parent.matrix_world.inverted()#.inverted()#Matrix()
         scene.update()
-    new_bonedict={x.name:bones[x].o2.name for x in bones}
+    new_bonedict={x.name:bones[x].o2.name for x in bones if bones[x].bone_id>150}
         
     if _set.ctc_copy_weights:
         for ttag in tag_dict:
