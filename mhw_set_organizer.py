@@ -1214,6 +1214,7 @@ class dpmhwButton(Operator):
         elif self.func=='ctc_copy_over_props':
             col=eval(self.var1)
             ctc_copy_over_props(self,context,col)
+        self.confirmer=False
         return {'FINISHED'}
         
 
