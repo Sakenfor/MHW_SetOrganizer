@@ -244,7 +244,7 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
         #bpy.ops.mod_tools.target_weights()
         #scene.update()
         layersave=[a for a in scene.layers]
-        valid_obs=[a.obje for a in _set.eobjs if a.export==1 and a.obje!=None]
+        valid_obs=[a.obje for a in _set.eobjs if a.export==1 and a.obje!=None and a.obje.name in obs]
         if expwhat=='CCL':
             valid_obs=[a for a in valid_obs if a.get('Type') and a['Type']=='CCL']
     
@@ -424,13 +424,13 @@ def CopyCTC(self,context,copy_from):
                 break
             #if ob.name=='f_leg074_0000 Armature':print("WTF!")
         if heade==None:return
-        if bpy.data.scenes.get(portscene)==None:scene=bpy.data.scenes.new(name=portscene)
-        else:scene=bpy.data.scenes[portscene]
-        sob=scene.objects
+        if bpy.data.scenes.get(portscene)==None:sc2=bpy.data.scenes.new(name=portscene)
+        else:sc2=bpy.data.scenes[portscene]
+        sob=sc2.objects
         #scene.objects.link(heade)
         
         src_heir=all_heir(heade)
-        source=scene.objects[heade.name]
+        source=sc2.objects[heade.name]
     source_bone_hie={}
     for h in src_heir:
         if  h.constraints.get('Bone Function')!=None and h.constraints['Bone Function'].target!=None:
@@ -459,6 +459,7 @@ def CopyCTC(self,context,copy_from):
     if target==None or source==None:
         self.report({'ERROR'},'Missing; Source: %s, Target %s'%(str(source),str(target)))
         return
+    valid_obs=[a for a in _set.eobjs if a.export==1 and a.obje!=None and a.obje.name in scene.objects]
     bone_additional=list(set([a for a in bone_additional if a!=None and  a.get('boneFunction')]))
     source_set=None
     tag_dict=get_tags(_set,where='Target')
@@ -469,8 +470,7 @@ def CopyCTC(self,context,copy_from):
                 source_set=se
                 tag_dict=get_tags(se,tag_dict,where='Source')
                 break
-    scene.update()
-    scene=context.scene
+    
     
     if not any(s.source==source for s in _set.ctc_copy_src):
         ctc_col=_set.ctc_copy_src.add()
@@ -603,20 +603,22 @@ def CopyCTC(self,context,copy_from):
 
             if ctctrack.get(o.parent):
                 _o2.set_parent(ctctrack[o.parent].o2)
-            try:
-                if _o2.parent!=None:
+            
+            if _o2.parent!=None:
+                try:
                     o2.parent=_o2.parent
-            except:
-                pass
+                except:
+                    pass
             copy_various_props(o,o2)
             if tty=='Bone':
                 o2.parent=None
                 o2.matrix_world=o.matrix_world.copy()
                 o2['boneFunction']=o2track.changed_id if o2track.changed_id!=0 else o2track.bone_id #overwrite copied Bone props in case boneFunction was shifted
                 ntrack=o2.name
+                scene.update()
             if mhw.ctc_copy_add_LR:
 
-                if not all(o2.name.endswith(x) for x in ['.L','.R']):
+                if  all(not o2.name.endswith(x) for x in ['.L','.R']):
                     tbone_X=o2.matrix_world.to_translation()[0]
                     
                     o2.name=o2.name.replace('.R','').replace('.L','')
@@ -625,9 +627,9 @@ def CopyCTC(self,context,copy_from):
                 if ntrack!=o2.name and tty=='Bone' and o['boneFunction']<150:
                     for i in [a for a in _set.eobjs if a.obje !=None]:
                         if i.obje.vertex_groups.get(ntrack):i.obje.vertex_groups.remove(group=i.obje.vertex_groups[ntrack])
-            scene.update()
+            
             if tty=='Bone':
-
+                
                 if mhw.ctc_copy_addVG and the_set!=None:
                         for ob in [a for a in the_set.eobjs if a.obje!=None]:
                             if ob.obje.vertex_groups.get(o2.name)==None:
@@ -637,13 +639,15 @@ def CopyCTC(self,context,copy_from):
                                 ovg=o2track.VG.add()
                                 ovg.name=vg.name
                                 ovg.obje=ob.obje
-
+        scene.update()
         if tty=='Frame':
             bbo=b_ids[o['boneFunctionID']]
             o2['boneFunctionID']=bbo.bone_id if bbo.changed_id==0 else bbo.changed_id
             o2track.changed_id=bbo.changed_id
             o2track.id_name='boneFunctionID'
             o2.rotation_euler=o.rotation_euler
+    
+    
     bones=ctcO.obs['Bone']
     nodes=ctcO.obs['Node']
     frames=ctcO.obs['Frame']
@@ -700,15 +704,16 @@ def CopyCTC(self,context,copy_from):
                 mcopy=s.data.copy()
                 oco.data=mcopy
                 scene.objects.link(oco)
+                scene.update()
                 for w in oco.vertex_groups:
                     if new_bonedict.get(w.name):w.name=new_bonedict[w.name]
                     else:oco.vertex_groups.remove(group=w)
                 for t in tag['Target']:
-                    bpy.ops.object.select_all(action='DESELECT')
+                    if t.name not in scene.objects:continue
                     t.select=1
                     scene.objects.active=t
-                    scene.update()
-                    
+
+                    bpy.ops.object.mode_set(mode='OBJECT')
                     mname='%s%s'%(s.name,t.name)
                     if t.modifiers.get(mname)==None:
                         mm = t.modifiers.new(mname, type='DATA_TRANSFER')
@@ -717,7 +722,7 @@ def CopyCTC(self,context,copy_from):
                     mm.data_types_verts={'VGROUP_WEIGHTS'}
                     mm.vert_mapping="POLYINTERP_NEAREST"
                     mm.object=oco
-                    bpy.ops.object.mode_set(mode='OBJECT')
+                    
                     bpy.ops.object.datalayout_transfer(modifier=mname)
                     try:
                         bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mname)
@@ -732,27 +737,28 @@ def CopyCTC(self,context,copy_from):
                                 t.vertex_groups.active_index=t.vertex_groups.find(vgn)
                                 bpy.ops.object.vertex_group_normalize_all(lock_active=True)
                         bpy.ops.object.mode_set(mode='OBJECT')
+                
                 bpy.data.objects.remove(oco)
                 bpy.data.meshes.remove(mcopy)
+                
             if _set.clean_after_ctc_copy:
-                scene.update()
-                for o in [a for a in _set.eobjs if a.obje !=None]:
+                
+                for o in valid_obs:
+                
                     bpy.ops.object.select_all(action='DESELECT')
-                    bpy.ops.object.mode_set(mode='OBJECT')
                     o.obje.select=1
                     scene.objects.active=o.obje
-                    try:
-                        remove_unused_vg(o.obje)
-                    except:
-                        self.report({"WARNING"},'Could not remove unused vertex groups on %s.'%o.obje.name)
+                    scene.update()
+                    bpy.ops.object.mode_set(mode='OBJECT')
+                    remove_unused_vg(o.obje)
                     bpy.ops.object.mode_set(mode='EDIT')
                     bpy.ops.mesh.select_all(action='SELECT')
-                    #bpy.ops.object.vertex_group_limit_total()
                     ldata=o.obje.data['blockLabel']
                     limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
-                    #IASkin8wt1UV
-                    bpy.ops.object.vertex_group_limit_total(limit=limit)
-
+                    try:
+                        bpy.ops.object.vertex_group_limit_total(limit=limit)
+                    except:
+                        pass
                     bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
                     bpy.ops.object.mode_set(mode='OBJECT')
                     

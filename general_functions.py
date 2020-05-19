@@ -91,7 +91,7 @@ def reload_external_ctc(self,context):
 
 def remove_unused_vg(ob):
 
-    ob.update_from_editmode()
+
     vgroup_used = {i: False for i, k in enumerate(ob.vertex_groups)}
     for v in ob.data.vertices:
         for g in v.groups:
@@ -100,8 +100,10 @@ def remove_unused_vg(ob):
     
     for i, used in sorted(vgroup_used.items(), reverse=True):
         if not used:
-            ob.vertex_groups.remove(ob.vertex_groups[i])
-
+            try:
+                ob.vertex_groups.remove(group=ob.vertex_groups[i])
+            except:
+                pass
 types_icons={'CTC_*_Frame':'ORTHO',
 'CTC':'LOGIC',
 'CTC_Chain':'LINKED',

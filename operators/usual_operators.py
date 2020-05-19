@@ -105,7 +105,7 @@ class CopyObjectChangeVG(Operator):
             if oNum!=None and tar_dic.get(oNum):
                 vg.name=vgg=tar_dic[oNum].name
                 if self.addLR:
-                    if not all(vg.name.endswith(x) for x in ['.L','.R']):
+                    if all(not vg.name.endswith(x) for x in ['.L','.R']):
                         tbone_X=tar_dic[oNum].matrix_world.to_translation()[0]
                         
                         vg.name=vg.name.replace('.R','').replace('.L','')
