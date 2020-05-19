@@ -50,8 +50,8 @@ class SimpleConfirmOperator(Operator):
         row.prop(self, "header_remove", text="Remove CTC Header Too?",icon='OUTLINER_OB_FORCE_FIELD')
         row=self.layout
         row.prop(self,"keep_bones",text="Keep ALL Bones?",icon='BONE_DATA')
-        row=self.layout
-        row.prop(self,'remove_vg',text='Remove Vertex Groups Associated?',icon='SNAP_VERTEX')
+        # row=self.layout
+        # row.prop(self,'remove_vg',text='Remove Vertex Groups Associated?',icon='SNAP_VERTEX')
 
 cls=[SimpleConfirmOperator,
 
