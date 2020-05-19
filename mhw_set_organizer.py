@@ -1188,8 +1188,8 @@ class dpmhwButton(Operator):
         elif self.func=='MHW_Export':MHW_Export(context)
         elif self.func=='MHW_Export_CTC':MHW_Export(context,'CTC')
         elif self.func=='MHW_Export_CCL':MHW_Export(context,'CCL')
-        elif self.func=='refresh_armor_numbers':refresh_settings(settings=0,event=sevent)
-        elif self.func=='reload_settings':refresh_settings(armor=0,event=sevent)
+        elif self.func=='refresh_armor_numbers':refresh_settings(settings=0,event=self.sevent)
+        elif self.func=='reload_settings':refresh_settings(armor=0,event=self.sevent)
         elif self.func=='goto_set_dir': #not implemented yet, go to directory
             goto_set_dir(context)
         elif self.func=='show_info':
