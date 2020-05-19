@@ -38,6 +38,7 @@ class mhwExpSetObj(PropertyGroup):
     tag=StringProperty()
     preserve_quad=BoolProperty(description='Make a copy of mesh on export and triangulate it, preserving original mesh')
     apply_shape_keys=BoolProperty()
+
 class ob_copy_track(PropertyGroup):
     name=StringProperty() #not needed, pretty sure
     caster=PointerProperty(type=bpy.types.Object)
@@ -71,8 +72,10 @@ class ctc_copy_sources(PropertyGroup):
     filter_frame=BoolProperty(default=1)
     filter_bone=BoolProperty(default=1)
     info_when_closed=BoolProperty(description='Show some properties even if tab of object is closed')
+
 native_str='\\nativePC\\pl\\{gender}_equip\\{armorname}\\{armor_part}\\mod\\'
 just_file_str='\\{gender}_{armor_part}{armorname2}'
+
 def upd_exp_path(self,context):
     scene=context.scene
     mhw=scene.mhwsake
@@ -97,6 +100,7 @@ def upd_exp_path(self,context):
         native_add=native
     native_add=native_add if native not in exp_root else ''
     self.export_path=exp_root+native_add+just_file_str.format(gender=self.gender,armorname2= armorname[2:],armor_part=self.armor_part)
+
 class mhwExpSet(PropertyGroup):
     name=StringProperty()
     oindex=IntProperty()
@@ -156,6 +160,7 @@ class mhwArmorNum(PropertyGroup):
 
 class blenderAppend(PropertyGroup):
     path=StringProperty(subtype='FILE_PATH')
+
 class ext_ctc_source(PropertyGroup):
     blend=StringProperty()
     folder=StringProperty()
@@ -214,8 +219,10 @@ def SaveSettings(context):
         append_paths.extend(to_upd['Global Settings']['BlendAppendPaths'])
         to_upd.update(savedump)
         savedump=to_upd
+    append_paths=list(set(append_paths))
     savedump['Global Settings']['BlendAppendPaths']=append_paths
     with open(json_savepath,'w') as jsav:json.dump(savedump,jsav, indent=1, sort_keys=True)
+
 def ApplySettingsToScenes(var,context):
     scene=context.scene
     mhw=bpy.context.scene.mhwsake
@@ -744,6 +751,7 @@ def CopyCTC(self,context,copy_from):
                     
             for m in modif_state_save:m.show_viewport=modif_state_save[m]
             for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
+
 class dpMHW_panel(bpy.types.Panel):
     """Creates a Panel in the Tool Shelf"""
     bl_label = "MOD3 Export Set Organizer"
@@ -827,6 +835,8 @@ class dpMHW_panel(bpy.types.Panel):
             help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="")
             help1.var1,help1.func='ctc_after_copy','show_info'
             if _set.ctc_copy_weights:
+                row=sbox.row()
+                row.label('Save before CTC Copy, if toggling on these below!!!')
                 row=sbox.row(align=1)
                 row.prop(_set,'clean_after_ctc_copy',icon='SNAP_VERTEX')
                 row.prop(_set,'normalize_active',icon='SNAP_NORMAL')
@@ -1088,12 +1098,7 @@ class dpMHW_panel(bpy.types.Panel):
                 col.separator()
                 col.operator("scene.dpmhw_obj_arranger", icon='TRIA_UP', text="").action = 'UP'
                 col.operator("scene.dpmhw_obj_arranger", icon='TRIA_DOWN', text="").action = 'DOWN'
-                # if len(_set.eobjs)>0:
-                    # aktO=_set.eobjs[_set.oindex]
-                    # row=sbox.row()
-                    # row.label('Active Set Object Indepth Settings:',icon='')
-                    # row=sbox.row()
-                    # row.prop(aktO.
+
 def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
     if armor:
         with open(base_dir+'\\clothes_num.json','r') as jsr:dict=json.load(jsr)
