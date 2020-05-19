@@ -733,11 +733,16 @@ def CopyCTC(self,context,copy_from):
                 bpy.data.objects.remove(oco)
                 bpy.data.meshes.remove(mcopy)
             if _set.clean_after_ctc_copy:
+                scene.update()
                 for o in [a for a in _set.eobjs if a.obje !=None]:
                     bpy.ops.object.select_all(action='DESELECT')
+                    bpy.ops.object.mode_set(mode='OBJECT')
                     o.obje.select=1
                     scene.objects.active=o.obje
-                    remove_unused_vg(o.obje)
+                    try:
+                        remove_unused_vg(o.obje)
+                    except:
+                        self.report({"WARNING"},'Could not remove unused vertex groups on %s.'%o.obje.name)
                     bpy.ops.object.mode_set(mode='EDIT')
                     bpy.ops.mesh.select_all(action='SELECT')
                     #bpy.ops.object.vertex_group_limit_total()
