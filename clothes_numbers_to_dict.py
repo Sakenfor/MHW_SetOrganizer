@@ -9,7 +9,8 @@ with open(txt2read,'r',encoding='utf-8') as asdf:test=asdf.read()
 as_dict={}
 for ii in test.split('\n'):
     i=ii.split('\t')
-    as_dict[i[1]]=i[2]
+    #as_dict[i[1]]=i[2]
+    as_dict[i[2]+'__'+i[1]]=i[1]
 with open(towrite,'w') as kl:
     json.dump(as_dict,kl,indent=1,sort_keys=1)
 print(as_dict)

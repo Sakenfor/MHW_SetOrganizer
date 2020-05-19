@@ -2,17 +2,16 @@
 
 import bpy,os,sys,json,glob,importlib
 from bpy.app.handlers import persistent
-from general_functions import *
+
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 if not base_dir in sys.path:sys.path.append(base_dir)
 #
-from gui_stuff import dpmhw_arrangers
+from general_functions import *
 from gui_stuff.dpmhw_arrangers import *
-from operators import usual_operators
 from operators.usual_operators import *
-importlib.reload(dpmhw_arrangers)
-importlib.reload(usual_operators)
+
+
 from re import findall
 from bpy.props import EnumProperty,StringProperty,BoolProperty,FloatProperty,IntProperty,CollectionProperty,PointerProperty
 from bpy.types import PropertyGroup,Operator
@@ -35,6 +34,10 @@ class mhwExpSetObj(PropertyGroup):
     name=StringProperty()
     export=BoolProperty(default=1)
     obje=PointerProperty(type=bpy.types.Object)
+    to_copy=BoolProperty()
+    tag=StringProperty()
+    preserve_quad=BoolProperty(description='Make a copy of mesh on export and triangulate it, preserving original mesh')
+    apply_shape_keys=BoolProperty()
 class ob_copy_track(PropertyGroup):
     name=StringProperty() #not needed, pretty sure
     caster=PointerProperty(type=bpy.types.Object)
@@ -68,22 +71,54 @@ class ctc_copy_sources(PropertyGroup):
     filter_frame=BoolProperty(default=1)
     filter_bone=BoolProperty(default=1)
     info_when_closed=BoolProperty(description='Show some properties even if tab of object is closed')
-    
+native_str='\\nativePC\\pl\\{gender}_equip\\{armorname}\\{armor_part}\\mod\\'
+just_file_str='\\{gender}_{armor_part}{armorname2}'
+def upd_exp_path(self,context):
+    scene=context.scene
+    mhw=scene.mhwsake
+    batch_custom_path,batch_native_override=None,None
+    if mhw.oindex2<=len(mhw.export_setofsets) and len(mhw.export_setofsets)>0:
+        _sset=mhw.export_setofsets[mhw.oindex2]
+        if self.is_batch:
+            batch_custom_path=_sset.sets_path if _sset.use_sets_path==False else None
+            batch_native_override=_sset.nativePCappend
+    armorname=mhw.armor_num[self.armor_name].num if mhw.armor_num.get(self.armor_name) else '  ChooseArmor'
+    native=native_str.format(gender=self.gender,
+    armor_part=self.armor_part,
+    armorname=armorname,
+    )
+    native_check = self.nativePCappend if batch_native_override==None else batch_native_override
+    cp=self.custom_export_path if batch_custom_path==None else batch_custom_path
+    if cp!='' and os.path.exists(cp):
+        exp_root=cp
+        native_add='' if not native_check else native
+    else:
+        exp_root=mhw.gamepath
+        native_add=native
+    native_add=native_add if native not in exp_root else ''
+    self.export_path=exp_root+native_add+just_file_str.format(gender=self.gender,armorname2= armorname[2:],armor_part=self.armor_part)
 class mhwExpSet(PropertyGroup):
     name=StringProperty()
     oindex=IntProperty()
     eobjs=CollectionProperty(type=mhwExpSetObj)
-    nativePCappend=BoolProperty()
-    armor_name=StringProperty()
-    armor_part=EnumProperty(items=[(a,a,a) for a in armor_parts_enum])
-    gender=EnumProperty(items=[(a,a,a) for a in ['f','m']],default='f')
-    empty_root=PointerProperty(type=bpy.types.Object)
-    ctc_header=PointerProperty(type=bpy.types.Object,poll=header_copy_poll)
-    custom_export_path=StringProperty(subtype='FILE_PATH')
-    use_custom_path=BoolProperty()
+    nativePCappend=BoolProperty(update=upd_exp_path)
+    armor_name=StringProperty(update=upd_exp_path)
+    armor_part=EnumProperty(items=[(a,a,a) for a in armor_parts_enum],update=upd_exp_path)
+    gender=EnumProperty(items=[(a,a,a) for a in ['f','m']],default='f',update=upd_exp_path)
+    empty_root=PointerProperty(type=bpy.types.Object,poll=empty_root_poll)
+    custom_export_path=StringProperty(subtype='FILE_PATH',update=upd_exp_path)
+    use_custom_path=BoolProperty(update=upd_exp_path)
+    more_obj_options=BoolProperty(default=1,name='More Object Options')
     
+    ctc_header=PointerProperty(type=bpy.types.Object,poll=header_copy_poll)
     ctc_copy_src=CollectionProperty(type=ctc_copy_sources)
+    clean_after_ctc_copy=BoolProperty(default=1,name='Clean Groups')
+    normalize_active=BoolProperty(default=1,name='Normalize Groups')
+    ctc_copy_weights=BoolProperty(default=1,name='Copy Weights')
+    
     show_ctc_manager=BoolProperty()
+    export_path=StringProperty()
+    is_batch=BoolProperty()
     
     split_normals = BoolProperty(
         name = "Use Custom Normals",
@@ -102,7 +137,6 @@ class mhwSetOfSetsObj(PropertyGroup):
     name=StringProperty()
     export=BoolProperty(default=1)
 
-    
 class mhwSetOfSets(PropertyGroup):
     name=StringProperty()
     oindex=IntProperty()
@@ -150,7 +184,7 @@ class dpMHW_help(PropertyGroup):
     ctc_copy_use_active=BoolProperty(description="Use active set's Root or active object")
     ctc_copy_add_LR=BoolProperty(default=1)
     ctc_copy_addVG=BoolProperty(default=1)
-    copy_src_track=CollectionProperty(type=ob_copy_track)
+    ctc_copy_wgt_src=PointerProperty(name='Weight Transfer Source',type=bpy.types.Object,poll=mesh_poll,description='Optional, object to transfer weights with')
     
     append_dirs=CollectionProperty(type=blenderAppend)
     show_dirs_paths=BoolProperty()
@@ -194,14 +228,15 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
+    _set.is_batch=is_batch
     obsave={}
     obs=scene.objects
-    
+    import bmesh
     if expwhat!='CTC':
         #bpy.ops.mod_tools.target_weights()
         #scene.update()
         layersave=[a for a in scene.layers]
-        valid_obs=[a.obje for a in _set.eobjs if a.export==1 and scene.objects.get(a.name)!=None]
+        valid_obs=[a.obje for a in _set.eobjs if a.export==1 and a.obje!=None]
         if expwhat=='CCL':
             valid_obs=[a for a in valid_obs if a.get('Type') and a['Type']=='CCL']
     
@@ -211,17 +246,29 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
     if mhw.armor_num.get(_set.armor_name)==None:
         ShowMessageBox('Armor set not chosen.','Error','ERROR')
         return
-
+    quad_save={}
     if expwhat=='Mod3':
-        _ext='mod3'
+        _ext='.mod3'
         uni_root=_set.empty_root
         uni_target='SkeletonRoot'
+        
+        for o in [a  for a in _set.eobjs if a.preserve_quad and a.obje in valid_obs]:
+            quad_save[o.obje]=o.obje.data
+            mesh_tri=o.obje.data.copy()
+            bm = bmesh.new()
+            bm.from_mesh(mesh_tri)
+            bmesh.ops.triangulate(bm, faces=bm.faces)
+            bm.to_mesh(mesh_tri)
+            bm.free()
+            o.obje.data=mesh_tri
+            mesh_tri.update(calc_tessface=False)
+            scene.update()
     elif expwhat=='CTC':
-        _ext='ctc'
+        _ext='.ctc'
         uni_root=_set.ctc_header
         uni_target='CTC'
     elif expwhat=='CCL':
-        _ext='ccl'
+        _ext='.ccl'
         uni_root='None'
         uni_target='CCL'
     #if expwhat=='Mod3':
@@ -247,35 +294,8 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
             if ol==True and ll==False:
                 scene.layers[n]=True
                 break
-    
-    if gamepath==None:gamepath=mhw.gamepath
-    armorname=mhw.armor_num[_set.armor_name].num
-    if _set.nativePCappend:nativePCappend=True
-    gender=_set.gender
-    if nativePCappend:
-        path_template='{gamepath}nativePC\\pl\\{gender}_equip\\{armorname}\\{armor_part}\\mod\\{gender}_{armor_part}{armorname2}.{ext}'
-    else:
-        path_template='{gamepath}\\{gender}_{armor_part}{armorname2}.{ext}'
-    
-    if  _set.use_custom_path and len(_set.custom_export_path)>3 and allow_custom_path:
-        if nativePCappend and is_batch:
-            cappend2='\\nativePC\\pl\\{gender}_equip\\{armorname}\\{armor_part}\\mod\\'
-        else:cappend2=''
-        expath=set.custom_export_path+cappend2+'\\{gender}_{armor_part}{armorname2}.{ext}'.format(
-        gender=gender,
-        armor_part=_set.armor_part,
-        armorname2=  armorname[2:],
-        ext=_ext
-        )
-        
-    else:
-        expath=path_template.format(
-        gamepath=gamepath,gender=gender,
-        armor_part=_set.armor_part,
-        armorname= armorname,
-        armorname2=  armorname[2:],
-        ext=_ext
-        )
+    upd_exp_path(_set,context)
+    expath=_set.export_path+_ext
     raw_expath=expath.replace(expath.split('\\')[-1],'')
     if not os.path.exists(raw_expath):
         try:
@@ -286,7 +306,6 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
     scene.update()
     if os.path.exists(raw_expath):
         if expwhat=='Mod3':
-            #print('MHW Organizer roots print:\n',list(a.name for a in obs if a.get('Type') and a['Type']=='SkeletonRoot'))
             bpy.ops.custom_export.export_mhw_mod3(filepath=expath,export_hidden=False,
             coerce_fourth=_set.coerce_fourth,split_normals=_set.split_normals,highest_lod=_set.highest_lod)
         elif expwhat=='CTC':
@@ -299,7 +318,8 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
     for o in obsave:#in scene.objects:
         o.hide=obsave[o]['hide']
         if obsave[o].get('Type'):o['Type']=obsave[o]['Type']
-    
+    for o in quad_save:o.data=quad_save[o]
+        
     if expwhat=='Mod3':
         for n,l in enumerate(layersave):scene.layers[n]=l
         #bpy.ops.mod_tools.target_armature()
@@ -334,14 +354,9 @@ def BatchSetsExport(context):
                     nativePCappend=native_append,
                     allow_custom_path=allow_custom_path,
                     is_batch=True)
-
-            # if _set.exMod3:
-                
-                # MHW_Export(context,expwhat='Mod3',gamepath=ex_path,nativePCappend=native_append,allow_custom_path=allow_custom_path)
-            # if _set.exCTC:
-                # MHW_Export(context,expwhat='CTC',gamepath=ex_path,nativePCappend=native_append,allow_custom_path=allow_custom_path)
-            # if _set.exCCL:
-                # MHW_Export(context,expwhat='CCL',gamepath=ex_path,nativePCappend=native_append,allow_custom_path=allow_custom_path)
+            _settt=mhw.export_set[mhw.oindex]
+            _settt.is_batch=False
+            upd_exp_path(_settt,context)
         else:print('Something went wrong choosing the %s set'%sse.name)
 
 class ctcO():
@@ -364,7 +379,7 @@ def CopyCTC(self,context,copy_from):
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
-    
+    found_root=None
     if mhw.ctc_copy_use_active:
         target=scene.active_object if _set.empty_root==None else _set.empty_root
     else:
@@ -374,15 +389,17 @@ def CopyCTC(self,context,copy_from):
     arma={ob:ob.get('boneFunction') for ob in _arma}
     arma_re={ob.get('boneFunction'):ob for ob in _arma}
     the_set=None
-    
+    bone_additional=[]
     if target==context.active_object:
         for i in mhw.export_set:
             if i.empty_root==target:the_set=i
     else:
         the_set=_set
     header_tar=_set.ctc_header if _set.ctc_header!=None else None
+
     if copy_from=='Local':
         source=mhw.header_copy_source
+        src_heir=all_heir(source)
     else:
         src=mhw.ext_header_copy_name
         blendf,src_real=src.split('.blend__')
@@ -403,36 +420,47 @@ def CopyCTC(self,context,copy_from):
         else:scene=bpy.data.scenes[portscene]
         sob=scene.objects
         #scene.objects.link(heade)
-        found_root=None
+        
         src_heir=all_heir(heade)
-        bone_additional=[]
-        for h in src_heir:
-            if  h.constraints.get('Bone Function')!=None and h.constraints['Bone Function'].target!=None:
-                proot=h.constraints['Bone Function'].target
-                hier=[]
+        source=scene.objects[heade.name]
+    source_bone_hie={}
+    for h in src_heir:
+        if  h.constraints.get('Bone Function')!=None and h.constraints['Bone Function'].target!=None:
+            proot=h.constraints['Bone Function'].target
+            hier=[]
+            bone_additional.append(proot)
+            while proot!=None:
+                if proot.get('boneFunction'):
+                    source_bone_hie[proot['boneFunction']]=proot.parent['boneFunction'] if proot.parent!=None and proot.parent.get('boneFunction') else 0
+                proot=proot.parent
                 bone_additional.append(proot)
-                while proot!=None:
-                    proot=proot.parent
-                    bone_additional.append(proot)
-                    hier.append(proot)
-                    
-                if len(hier)<3:continue
-                if found_root==None:
-                    found_root=hier[-2]
-                    print("ROOT ",found_root)
-                    src_bone_hier=all_heir(found_root)
-                #break
-        bone_additional=list(set([a for a in bone_additional if a!=None and 'boneFunction' in a]))
+                hier.append(proot)
+                #if proot==None:continue #or proot.parent==None:continue
+                #if proot.get('boneFunction')==None:continue
+            if len(hier)<3:continue
+            if found_root==None:
+                found_root=hier[-2]
+                src_bone_hier=all_heir(found_root)
+
+    if copy_from!='Local':
         for h in bone_additional+src_heir:
             try:
                 sob.link(h)
             except:
                 pass
-
-        source=scene.objects[heade.name]
     if target==None or source==None:
         self.report({'ERROR'},'Missing; Source: %s, Target %s'%(str(source),str(target)))
         return
+    bone_additional=list(set([a for a in bone_additional if a!=None and  a.get('boneFunction')]))
+    source_set=None
+    tag_dict=get_tags(_set,where='Target')
+
+    for s in bpy.data.scenes:
+        for se in s.mhwsake.export_set:
+            if se.ctc_header==source and source!=None:
+                source_set=se
+                tag_dict=get_tags(se,tag_dict,where='Source')
+                break
     scene.update()
     scene=context.scene
     
@@ -455,6 +483,7 @@ def CopyCTC(self,context,copy_from):
     _obs=bpy.data.objects
     count_types={'Bone':1,'Header':1,'Frame':1,'Chain':1,'Node':1}
     ctcO.obs={'Bone':{},'Header':{},'Frame':{},'Chain':{},'Node':{}}
+    
     total_list=bone_additional+_src
     
     for isr,o in enumerate(_src ):
@@ -466,13 +495,16 @@ def CopyCTC(self,context,copy_from):
             if pco.target==None:continue
             nodebone=pco.target
             total_list.insert(0,nodebone)
+            if nodebone.parent!=None and nodebone.parent not in total_list:total_list.insert(0,nodebone.parent)
+            
             max_id2=nodebone['boneFunction']
         if header_tar==None and o.get('Type') and o['Type']=='CTC':
             header_tar=o
+    
     order=total_list[:]
     total_list=sorted(list(set(total_list)),key=lambda x:order.index(x))
     #remove doubles,preserve sort order, crucial else parenting is messed, is a current flaw ^
-    b_ids={}
+    b_ids,changed_ids={},{}
     if max_id2>fmax:fmax=max_id2+1
     elif max_id2==fmax:fmax=fmax+1
     for xx in _set.ctc_copy_src:
@@ -480,11 +512,13 @@ def CopyCTC(self,context,copy_from):
         for a in xx.copy_src_track:
             if a.ttype!='Bone' or a.bone_id==0:continue
             b_ids[a.bone_id]=a
+            if a.changed_id!=0:changed_ids[a.changed_id]=a
+    #parenting={changed_ids[z] if changed_ids.get(z) else b_ids[z] for z in 
+    #arma_re[0]=_set.empty_root
     for isr,o in enumerate(total_list):
         if o==None:continue
         if o.get('Type') and regular_ctc_names.get(o['Type']):tty=regular_ctc_names[o['Type']]
         else:tty='Bone'
-        
         if header_tar!=None and header_tar!=o and tty=='Header':
             _o2=ctcO(tty=tty,o=o,o2=header_tar)
             ctctrack[o]=_o2
@@ -501,14 +535,18 @@ def CopyCTC(self,context,copy_from):
         if tty not in o.name:obn='%s_%s'%(tty,obn) if mhw.type_infront else '%s_%s'%(obn,tty)
         new,o2=0,None
         o_id=o.get('boneFunction')
+        
         o2track=ob_in_track(ctc_col,o,armature=target,report=self)
         bone_already=0
         if tty=='Bone':
+            if source_bone_hie.get(o_id)==None:
+                continue
+            pid=source_bone_hie[o_id]
             if b_ids.get(o_id):
                 o2track=b_ids[o_id]
                 o2=o2track.o2
                 bone_already=1
-            elif arma_re.get(o_id) and o_id<150:
+            elif arma_re.get(o_id):
                 o2=arma_re[o_id]
                 o2track=ob_in_track(ctc_col,o,source,target,o2)
                 bone_already=1
@@ -532,6 +570,7 @@ def CopyCTC(self,context,copy_from):
         ctctrack[o]=_o2
         if o_id!=None:o2track.bone_id=o_id
         b_ids[o_id]=o2track
+        if o_id==13:continue
         if 1+1==2:
             if tty=='Bone':
                 o2track.id_name='boneFunction'
@@ -546,22 +585,26 @@ def CopyCTC(self,context,copy_from):
                         
                     else:
                         o_id=o2track.changed_id
-                if arma_re.get(o_id)==None:
-                    arma_re[o_id]=o2.parent
-                if arma_re.get(o_id):
+                
+                if changed_ids.get(pid):
+                    _o2.set_parent(changed_ids[pid].o2)
+                elif b_ids.get(pid):_o2.set_parent(b_ids[pid].o2)
+                elif arma_re.get(o_id):
                     _o2.set_parent(arma_re[o_id])
-                    #_pa=
+
             if ctctrack.get(o.parent):
                 _o2.set_parent(ctctrack[o.parent].o2)
             try:
-                o2.parent=_o2.parent
+                if _o2.parent!=None:
+                    o2.parent=_o2.parent
             except:
                 pass
             copy_various_props(o,o2)
             if tty=='Bone':
-                o2.matrix_world=o.matrix_world
+                o2.parent=None
+                o2.matrix_world=o.matrix_world.copy()
                 o2['boneFunction']=o2track.changed_id if o2track.changed_id!=0 else o2track.bone_id #overwrite copied Bone props in case boneFunction was shifted
-            
+                ntrack=o2.name
             if mhw.ctc_copy_add_LR:
 
                 if not any(o2.name.endswith(x) for x in ['.L','.R']):
@@ -570,6 +613,9 @@ def CopyCTC(self,context,copy_from):
                     o2.name=o2.name.replace('.R','').replace('.L','')
                     if tbone_X<0:o2.name=o2.name+'.R'
                     elif tbone_X>0:o2.name=o2.name+'.L'
+                if ntrack!=o2.name and tty=='Bone' and o['boneFunction']<150:
+                    for i in [a for a in _set.eobjs if a.obje !=None]:
+                        if i.obje.vertex_groups.get(ntrack):i.obje.vertex_groups.remove(group=i.obje.vertex_groups[ntrack])
             scene.update()
             if tty=='Bone':
 
@@ -583,12 +629,12 @@ def CopyCTC(self,context,copy_from):
                                 ovg.name=vg.name
                                 ovg.obje=ob.obje
 
-
         if tty=='Frame':
             bbo=b_ids[o['boneFunctionID']]
             o2['boneFunctionID']=bbo.bone_id if bbo.changed_id==0 else bbo.changed_id
             o2track.changed_id=bbo.changed_id
             o2track.id_name='boneFunctionID'
+            o2.rotation_euler=o.rotation_euler
     bones=ctcO.obs['Bone']
     nodes=ctcO.obs['Node']
     frames=ctcO.obs['Frame']
@@ -597,12 +643,14 @@ def CopyCTC(self,context,copy_from):
         self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
     for bo in bones: #Check for missing parenting
         _bo=ctcO.obs['Bone'][bo]
-        if _bo.o2==None:continue 
+        if _bo.o2==None:
+            continue 
         if _bo.o2.parent==None:
-            if bo.parent!=None:
+            if bo.parent!=None and bones.get(bo.parent):
                 pp=bones[bo.parent].o2
+                
                 if pp!=None:
-                    mcopy=_bo.o2.matrix_world.copy()
+                    mcopy=_bo.o.matrix_world.copy()
                     _bo.o2.parent=pp
                     _bo.o2.matrix_world=mcopy
     for node in nodes: #Add constraints to Nodes
@@ -612,18 +660,90 @@ def CopyCTC(self,context,copy_from):
             self.report({'WARNING'},'%s - could not find constraint.'%nodes[node].o.name)
             continue
         orig_tar=nodes[node].con.target
-        fnewbone=[a for a  in bones if bones[a].o==orig_tar]
-        if fnewbone==[]:continue
-        else:fnewbone=fnewbone[0]
+        bonefind=bones.get(orig_tar)
+        if bonefind==None:continue
         if _o2.constraints.get('Bone Function')==None:
             cons=_o2.constraints.new(type='CHILD_OF')
             cons.name='Bone Function'
         else:cons=_o2.constraints['Bone Function']
-        cons.target=bones[fnewbone].o2
+        cons.target=bones[bonefind.o].o2
         cons.inverse_matrix =nodes[node].o.parent.matrix_world.inverted()#.inverted()#Matrix()
         scene.update()
+    new_bonedict={x.name:bones[x].o2.name for x in bones}
         
+    if _set.ctc_copy_weights:
+        for ttag in tag_dict:
+            tag=tag_dict[ttag]
+            if tag['Target']==[] or tag['Source']==[]:continue
+            modif_state_save,ob_state_save={},{}
+            
+            for s in tag['Target']+tag['Source']:
+                ob_state_save[s]=[s.hide,s.hide_select]
+                s.hide=0
+                s.hide_select=0
+                for m in [a for a in s.modifiers if a.type!='SUBSURF']:
+                    modif_state_save[m]=m.show_viewport
+                    m.show_viewport=0
+            for s in tag['Source']:
 
+                #mco=s.data.copy()
+                oco=s.copy()#new_ob(s.name+'_weight_source',mco)
+                mcopy=s.data.copy()
+                oco.data=mcopy
+                scene.objects.link(oco)
+                for w in oco.vertex_groups:
+                    if new_bonedict.get(w.name):w.name=new_bonedict[w.name]
+                    else:oco.vertex_groups.remove(group=w)
+                for t in tag['Target']:
+                    bpy.ops.object.select_all(action='DESELECT')
+                    t.select=1
+                    scene.objects.active=t
+                    scene.update()
+                    
+                    mname='%s%s'%(s.name,t.name)
+                    if t.modifiers.get(mname)==None:
+                        mm = t.modifiers.new(mname, type='DATA_TRANSFER')
+                    else:mm=t.modifiers[mname]
+                    mm.use_vert_data=True
+                    mm.data_types_verts={'VGROUP_WEIGHTS'}
+                    mm.vert_mapping="POLYINTERP_NEAREST"
+                    mm.object=oco
+                    bpy.ops.object.mode_set(mode='OBJECT')
+                    bpy.ops.object.datalayout_transfer(modifier=mname)
+                    try:
+                        bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mname)
+                    except:
+                        self.report({'ERROR'},'Could not apply modifier %s on %s, probably a linked object.'%(mname,t.name))
+                    if _set.normalize_active:
+                        bpy.ops.object.mode_set(mode='EDIT')
+                        bpy.ops.mesh.select_all(action='SELECT')
+                        for vg in new_bonedict:
+                            vgn=new_bonedict[vg]
+                            if t.vertex_groups.get(vgn):
+                                t.vertex_groups.active_index=t.vertex_groups.find(vgn)
+                                bpy.ops.object.vertex_group_normalize_all(lock_active=True)
+                        bpy.ops.object.mode_set(mode='OBJECT')
+                bpy.data.objects.remove(oco)
+                bpy.data.meshes.remove(mcopy)
+            if _set.clean_after_ctc_copy:
+                for o in [a for a in _set.eobjs if a.obje !=None]:
+                    bpy.ops.object.select_all(action='DESELECT')
+                    o.obje.select=1
+                    scene.objects.active=o.obje
+                    remove_unused_vg(o.obje)
+                    bpy.ops.object.mode_set(mode='EDIT')
+                    bpy.ops.mesh.select_all(action='SELECT')
+                    #bpy.ops.object.vertex_group_limit_total()
+                    ldata=o.obje.data['blockLabel']
+                    limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
+                    #IASkin8wt1UV
+                    bpy.ops.object.vertex_group_limit_total(limit=limit)
+
+                    bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
+                    bpy.ops.object.mode_set(mode='OBJECT')
+                    
+            for m in modif_state_save:m.show_viewport=modif_state_save[m]
+            for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
 class dpMHW_panel(bpy.types.Panel):
     """Creates a Panel in the Tool Shelf"""
     bl_label = "MOD3 Export Set Organizer"
@@ -645,6 +765,8 @@ class dpMHW_panel(bpy.types.Panel):
         # gp=row.operator('scene.dpmhw_button',text='[+]')
         # gp.func='ApplySettingsToScenes'
         # gp.name='gamepath'
+        _set=mhw.export_set[mhw.oindex] if mhw.oindex<=len(mhw.export_set) and len(mhw.export_set)>0 else False
+
         row=sbox.row()
         savese=row.operator('scene.dpmhw_button',text='Save Settings',icon='GREASEPENCIL')
         savese.confirmer,savese.func=1,'Save Settings'
@@ -654,7 +776,8 @@ class dpMHW_panel(bpy.types.Panel):
         help1.var1,help1.func='scenes_reload','show_info'
         row=sbox.row()
         row.operator('scene.dpmhw_button',text='Settings',icon='FILE_SCRIPT').func='reload_settings'
-        row.operator('scene.dpmhw_button',text='Armor Numbers',icon='LINENUMBERS_ON').func='refresh_armor_numbers'
+        arm_ic,arm_text=('FILE_TICK','') if len(mhw.armor_num)>0 else ('FILE_REFRESH','(refresh!)')
+        row.operator('scene.dpmhw_button',text='Armor Numbers %s'%arm_text,icon=arm_ic).func='refresh_armor_numbers'
         row=sbox.row()
         row.prop(mhw,'show_dirs_paths',text='Blend Append Options')
         if mhw.show_dirs_paths:
@@ -687,17 +810,26 @@ class dpMHW_panel(bpy.types.Panel):
         if mhw.show_header_copy:
             row=sbox.row(align=1)
             row.prop_search(mhw,'header_copy_source',bpy.data,'objects',text='')
-            
+
             ctcopy=row.operator('scene.dpmhw_button',text='Local Copy',icon='COPYDOWN')
             ctcopy.func,ctcopy.var1='CopyCTC','Local'
             #if len(mhw.extctc_src)>0:
             row=sbox.row(align=1)
+
             row.operator('scene.dpmhw_button',text='',icon='FILE_REFRESH').func='reload_external_ctc'
 
             row.prop_search(mhw,'ext_header_copy_name',mhw,'extctc_src',text='',icon='PLUGIN')
             ctcopy=row.operator('scene.dpmhw_button',text='External Copy',icon='APPEND_BLEND')
             ctcopy.func,ctcopy.var1='CopyCTC','External'
+            row=sbox.row(align=1)
 
+            row.prop(_set,'ctc_copy_weights',icon='MOD_VERTEX_WEIGHT')
+            help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="")
+            help1.var1,help1.func='ctc_after_copy','show_info'
+            if _set.ctc_copy_weights:
+                row=sbox.row(align=1)
+                row.prop(_set,'clean_after_ctc_copy',icon='SNAP_VERTEX')
+                row.prop(_set,'normalize_active',icon='SNAP_NORMAL')
             row=sbox.row(align=1)
             row.prop(mhw,'header_copy_name',text='Prepend obj text')
             row.prop(mhw,'header_new_names',text='New Name')
@@ -723,21 +855,21 @@ class dpMHW_panel(bpy.types.Panel):
         if mhw.show_setofsets:
             
             if mhw.oindex2<=len(mhw.export_setofsets) and len(mhw.export_setofsets)>0:
-                _set=mhw.export_setofsets[mhw.oindex2]
+                _sset=mhw.export_setofsets[mhw.oindex2]
                 row=sbox.row(align=1)
-                row.prop(_set,'sets_path',text='Exportpath')
-                row.prop(_set,'use_sets_path',text='',icon=['RADIOBUT_OFF','RADIOBUT_ON'][_set.use_sets_path])
+                row.prop(_sset,'sets_path',text='Exportpath')
+                row.prop(_sset,'use_sets_path',text='',icon=['RADIOBUT_OFF','RADIOBUT_ON'][_sset.use_sets_path])
                 row=sbox.row(align=1)
                 help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="") 
                 help1.var1,help1.func='append_native','show_info'
-                row.prop(_set,'nativePCappend',text='Append: \\nativePC\\.. etc..',icon='WORDWRAP_OFF')
-                row.prop(_set,'perSetCustomPathUse',text='UsePerSetCustomPath',icon='SYNTAX_OFF')
+                row.prop(_sset,'nativePCappend',text='Append: \\nativePC\\.. etc..',icon='WORDWRAP_OFF')
+                row.prop(_sset,'perSetCustomPathUse',text='UsePerSetCustomPath',icon='SYNTAX_OFF')
                 row=sbox.row(align=1)
-                row.prop(_set,'exMod3',icon_value=ico('export'))
-                row.prop(_set,'exCTC',icon='MOD_SIMPLEDEFORM')
-                row.prop(_set,'exCCL',icon='META_CAPSULE')
+                row.prop(_sset,'exMod3',icon_value=ico('export'))
+                row.prop(_sset,'exCTC',icon='MOD_SIMPLEDEFORM')
+                row.prop(_sset,'exCCL',icon='META_CAPSULE')
                 row=sbox.row(align=1)
-                row.operator('scene.dpmhw_button',text='Batch Export: %s'%_set.name,icon='STRANDS').func='BatchSetsExport'
+                row.operator('scene.dpmhw_button',text='Batch Export: %s'%_sset.name,icon='STRANDS').func='BatchSetsExport'
                 row=sbox.row(align=1)
 
             row=sbox.row(align=1)
@@ -777,8 +909,7 @@ class dpMHW_panel(bpy.types.Panel):
         row.prop(mhw,'show_main_sets',text='Toggle View',icon='NLA')
         row=sbox.row(align=1)
         if mhw.show_main_sets:
-            if mhw.oindex<=len(mhw.export_set) and len(mhw.export_set)>0:
-                _set=mhw.export_set[mhw.oindex]
+            if _set:
                 aktset='%s'%mhw.export_set[mhw.oindex].name
                 if mhw.armor_num.get(_set.armor_name):
                     armorname=mhw.armor_num[_set.armor_name].num
@@ -798,7 +929,7 @@ class dpMHW_panel(bpy.types.Panel):
                 row2.prop(_set,'armor_part',text='',icon_value=ico(_set.armor_part),expand=0)
                 row2.prop(_set,'gender',text='',expand=0)
                 row2=sbox.row(align=1)
-                row2.prop(_set,'empty_root',text='Root',icon='OUTLINER_OB_MESH')
+                row2.prop_search(_set,'empty_root',context.scene,'objects',text='Root',icon='OUTLINER_OB_MESH')
                 row2=sbox.row(align=1)
                 row2.prop(_set,'ctc_header',text='CTC_header',icon='OUTLINER_OB_FORCE_FIELD')
                 row2=sbox.row(align=1)
@@ -806,6 +937,10 @@ class dpMHW_panel(bpy.types.Panel):
                 
                 row2.prop(_set,'custom_export_path',text='Custom Export Path')
                 row2.prop(_set,'nativePCappend',text='nativeAppend',icon='WORDWRAP_OFF')
+                row2=sbox.row(align=1)
+                row2.label(_set.export_path)
+                if _set.export_path!='':
+                    row2.operator('scene.dpmhw_button',text='',icon='FILE_FOLDER').func='goto_set_dir'
                 row2=sbox.row(align=1)
                 row2.prop(_set,'use_custom_path',text='Use Custom Export Path',icon='COPY_ID')
                 row2=sbox.row(align=1)
@@ -939,6 +1074,7 @@ class dpMHW_panel(bpy.types.Panel):
                 row=sbox.row(align=1)
                 
                 row.label(text="Set's Objects:",icon='MESH_CUBE')
+                row.prop(_set,'more_obj_options')
                 row.operator("scene.dpmhw_obj_arranger", icon='ROTATE', text="Add All Selected").action = 'BATCHADD'
                 help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="") 
                 help1.var1,help1.func='obj_info','show_info'
@@ -952,22 +1088,30 @@ class dpMHW_panel(bpy.types.Panel):
                 col.separator()
                 col.operator("scene.dpmhw_obj_arranger", icon='TRIA_UP', text="").action = 'UP'
                 col.operator("scene.dpmhw_obj_arranger", icon='TRIA_DOWN', text="").action = 'DOWN'
-
-def refresh_armor_numbers():
-    with open(base_dir+'\\clothes_num.json','r') as jsr:dict=json.load(jsr)
-    for scene in bpy.data.scenes:
+                # if len(_set.eobjs)>0:
+                    # aktO=_set.eobjs[_set.oindex]
+                    # row=sbox.row()
+                    # row.label('Active Set Object Indepth Settings:',icon='')
+                    # row=sbox.row()
+                    # row.prop(aktO.
+def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
+    if armor:
+        with open(base_dir+'\\clothes_num.json','r') as jsr:dict=json.load(jsr)
+    if settings:
+        with open(json_savepath,'r') as rp:jsr=json.load(rp)
+    
+    if scenelist==[]:
+        scenelist=[s for s in bpy.data.scenes]
+    for scene in scenelist:
         mhw=scene.mhwsake
-        while len(mhw.armor_num)>0:mhw.armor_num.remove(0)
-        for i in dict:
-            add=mhw.armor_num.add()
-            add.name=i
-            add.num=dict[i]
-def reload_settings():
-    if os.path.exists(json_savepath):
-       with open(json_savepath,'r') as rp:jsr=json.load(rp)
-            
-       for scene in bpy.data.scenes:
-            mhw=scene.mhwsake
+        if armor:
+            while len(mhw.armor_num)>0:mhw.armor_num.remove(0)
+            for i in dict:
+                add=mhw.armor_num.add()
+                num,name=i.split('__')
+                add.name=name+' (%s)'%num
+                add.num=num
+        if settings:
             mhw.gamepath=jsr['Global Settings']['gamepath']
             while len(mhw.append_dirs)>0:mhw.append_dirs.remove(0)
             for i in jsr['Global Settings']['BlendAppendPaths']:
@@ -975,15 +1119,22 @@ def reload_settings():
                     padd=mhw.append_dirs.add()
                     padd.path=i
                     padd.name=i
+# def reload_settings(scenelist=[]):
+    # if os.path.exists(json_savepath):
+       # with open(json_savepath,'r') as rp:jsr=json.load(rp)
+       # if scenelist==[]:scenelist=[s for s in bpy.data.scenes]
+       # for scene in scenelist:
+            # mhw=scene.mhwsake
+
 @persistent
 def post_load(scene):
 
     context = bpy.context
     scene=context.scene
     mhw=scene.mhwsake
-
-    refresh_armor_numbers()
-    reload_settings()
+    refresh_settings()
+    # refresh_armor_numbers()
+    # reload_settings()
     #print("WTF")
     #This handler function is ran twice, not sure why,
     #can see it 'WTF' is printed twice.
@@ -1024,9 +1175,8 @@ class dpmhwButton(Operator):
         elif self.func=='MHW_Export':MHW_Export(context)
         elif self.func=='MHW_Export_CTC':MHW_Export(context,'CTC')
         elif self.func=='MHW_Export_CCL':MHW_Export(context,'CCL')
-        elif self.func=='refresh_armor_numbers':refresh_armor_numbers()
-        elif self.func=='reload_settings':reload_settings()
-            
+        elif self.func=='refresh_armor_numbers':reload_settings(settings=0,event=sevent)
+        elif self.func=='reload_settings':reload_settings(armor=0,event=sevent)
         elif self.func=='goto_set_dir': #not implemented yet, go to directory
             goto_set_dir(context)
         elif self.func=='show_info':

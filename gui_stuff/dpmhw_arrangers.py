@@ -160,11 +160,14 @@ class dpMHW_drawObjSet(bpy.types.UIList):
         mhw=bpy.context.scene.mhwsake
         _set=mhw.export_set[mhw.oindex]
 
-        l=layout.split(percentage=76,align=1)
-        l.prop(item,"obje",icon=ik,text="")
-
+        #l=layout.split(percentage=76,align=1)
+        layout.prop(item,"obje",icon=ik,text="")
+        
         layout.prop(item, "export", text="", emboss=0, icon=['RADIOBUT_OFF','RADIOBUT_ON'][item.export],expand=0)
-        #layout.operator("scene.dpmhw_obj_arranger", icon='ZOOMOUT', text="").action = 'REMOVE'
+        if _set.more_obj_options:
+            row=layout.row()
+            row.prop(item,'tag',text='Tag')
+            row.prop(item,'preserve_quad',text='',icon='MOD_TRIANGULATE')
 
     def invoke(self, context, event):        
         pass 

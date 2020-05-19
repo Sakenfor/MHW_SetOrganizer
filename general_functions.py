@@ -1,4 +1,4 @@
-import bpy,glob
+import bpy,glob,os
 def all_heir(ob, levels=10):
     oreturn=[]
     def recurse(ob, parent, depth):
@@ -23,22 +23,35 @@ def copy_various_props(o,o2):
     o2.show_bounds=o.show_bounds
     o2.show_x_ray=o.show_x_ray
 
-def new_ob(name,mesh=None):
+def new_ob(name,mesh=None,link=1):
     o=bpy.data.objects.new(name,mesh)
-    bpy.context.scene.objects.link(o)
+    if link:bpy.context.scene.objects.link(o)
     return o
 def header_copy_poll(self,object):
     return object.get('Type') and object['Type']=='CTC'
-
+def empty_root_poll(self,object):
+    return object.parent==None
+def mesh_poll(self,object):
+    return object.type=='MESH'
 def has_att(ob,name,str1=None):
     return ob.get(name) and (ob[name]==str1 and str1!=None)
+
+def get_tags(_set,tag_dict=None,where=''):
+            tag_dict={} if tag_dict==None else tag_dict
+            for a in [z for z in _set.eobjs if z.tag!='' and z.obje!=None]:
+                for ta in [s for s in a.tag.split(',') if len(s)>1]:
+                    if tag_dict.get(ta)==None:tag_dict[ta]={'Source':[],'Target':[]}
+                    tag_dict[ta][where].append(a.obje)
+            return tag_dict
 
 def goto_set_dir(context):
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
-    
-    os.startfile(path)
+    ppath=_set.export_path
+    if 'nativePC' in ppath:
+        ppath=ppath.replace(ppath.split('\\')[-1],'')
+    os.startfile(ppath)
     #todo, button that opens a directory of chosen set
 
 def ctc_edit_col_edit(self,context,var1):
@@ -76,7 +89,18 @@ def reload_external_ctc(self,context):
                         ext.blend=blend
                    #bpy.context.scene.objects.link(obj) # Blender 2.7x
 
+def remove_unused_vg(ob):
 
+    ob.update_from_editmode()
+    vgroup_used = {i: False for i, k in enumerate(ob.vertex_groups)}
+    for v in ob.data.vertices:
+        for g in v.groups:
+            if g.weight > 0.0:
+                vgroup_used[g.group] = True
+    
+    for i, used in sorted(vgroup_used.items(), reverse=True):
+        if not used:
+            ob.vertex_groups.remove(ob.vertex_groups[i])
 
 types_icons={'CTC_*_Frame':'ORTHO',
 'CTC':'LOGIC',
@@ -202,6 +226,15 @@ Can freely edit object names with that being said.
 '''
 Copying the props from sources, will preserve
 the shifted boneFunctions if there are any, on Frame and Bone.
+
+'''
+,'ctc_after_copy':
+'''
+Ticking this, after ctc has been copied, it will look for Set from which
+the CTC Source was, and check for 'tags' of source set objects, and tags
+of active set, and transfer weights of bones BELOW 150 number,
+between the objects that had same tag.
+
 
 '''
  }
