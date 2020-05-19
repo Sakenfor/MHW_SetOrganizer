@@ -565,7 +565,9 @@ def CopyCTC(self,context,copy_from):
                 else:
                     new=1
                     rem_num=findall(r'\.[0-9]*',obn)
-                    if rem_num:obn=obn.replace(rem_num[0],'')
+                    
+                    if rem_num and rem_num[0]!='.':obn=obn.replace(rem_num[0],'')
+                    self.report({'INFO'},str(rem_num)+' %s %s'%(o.name,obn))
                     if _obs.get(obn):
                         nnum=1
                         while _obs.get(obn+'.%03d'%nnum):
@@ -615,7 +617,7 @@ def CopyCTC(self,context,copy_from):
                 ntrack=o2.name
             if mhw.ctc_copy_add_LR:
 
-                if not any(o2.name.endswith(x) for x in ['.L','.R']):
+                if not all(o2.name.endswith(x) for x in ['.L','.R']):
                     tbone_X=o2.matrix_world.to_translation()[0]
                     
                     o2.name=o2.name.replace('.R','').replace('.L','')
