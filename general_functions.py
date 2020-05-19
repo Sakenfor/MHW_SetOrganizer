@@ -232,7 +232,7 @@ the shifted boneFunctions if there are any, on Frame and Bone.
 '''
 Ticking this, after ctc has been copied, it will look for Set from which
 the CTC Source was, and check for 'tags' of source set objects, and tags
-of active set, and transfer weights of bones BELOW 150 number,
+of active set, and transfer weights of bones ABOVE 150 number,
 between the objects that had same tag.
 
 
