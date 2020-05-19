@@ -540,7 +540,7 @@ def CopyCTC(self,context,copy_from):
         else:
             obn='%s%s'%(text_new,count_types[tty] if tty!='Header' else '')
             count_types[tty]+=1
-        if tty not in o.name:obn='%s_%s'%(tty,obn) if mhw.type_infront else '%s_%s'%(obn,tty)
+        if tty not in o.name:obn='%s_%s'%(tty,obn) if not mhw.type_infront else '%s_%s'%(obn,tty)
         new,o2=0,None
         o_id=o.get('boneFunction')
         
@@ -1188,8 +1188,8 @@ class dpmhwButton(Operator):
         elif self.func=='MHW_Export':MHW_Export(context)
         elif self.func=='MHW_Export_CTC':MHW_Export(context,'CTC')
         elif self.func=='MHW_Export_CCL':MHW_Export(context,'CCL')
-        elif self.func=='refresh_armor_numbers':reload_settings(settings=0,event=sevent)
-        elif self.func=='reload_settings':reload_settings(armor=0,event=sevent)
+        elif self.func=='refresh_armor_numbers':refresh_settings(settings=0,event=sevent)
+        elif self.func=='reload_settings':refresh_settings(armor=0,event=sevent)
         elif self.func=='goto_set_dir': #not implemented yet, go to directory
             goto_set_dir(context)
         elif self.func=='show_info':
