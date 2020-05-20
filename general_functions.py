@@ -1,4 +1,22 @@
 import bpy,glob,os
+
+def ObjProp(var,obj,val,descr,max=10.0,min=0.0):
+ if not obj==None:
+     if not obj.get('_RNA_UI'):
+       obj['_RNA_UI'] = {}
+     obj[var]=val
+     obj['_RNA_UI'][var] = {"description":descr,
+          "default": 1.0,
+          "min":min,
+          "max":max,
+          "soft_min":0.0,
+          "soft_max":10.0,
+          "is_overridable_library":0,
+          }
+def reeport(self,**args):
+    rep=[]
+    for s in args:rep.append(' %s: %s '%(s,args[s]))
+    self.report({'INFO'},', '.join(a for a in rep))
 def all_heir(ob, levels=10):
     oreturn=[]
     def recurse(ob, parent, depth):
@@ -16,16 +34,18 @@ def find_col_index(name,collection):
     return None
 def copy_props(sors,tar):
     for k,v in sors.items():tar[k]=v
-    
+        #ObjProp(k,tar,v,'')
 def copy_various_props(o,o2):
     copy_props(o,o2)
     o2.empty_draw_type=o.empty_draw_type
     o2.show_bounds=o.show_bounds
     o2.show_x_ray=o.show_x_ray
 
-def new_ob(name,mesh=None,link=1):
+def new_ob(scene,name,mesh=None,link=1):
     o=bpy.data.objects.new(name,mesh)
-    if link:bpy.context.scene.objects.link(o)
+    if link:
+        scene.objects.link(o)
+        scene.update()
     return o
 def header_copy_poll(self,object):
     return object.get('Type') and object['Type']=='CTC'
@@ -156,6 +176,7 @@ regular_ctc_names={'CTC_*_Frame':'Frame',
 'CTC_Chain':'Chain',
 'CTC_Node':'Node'}
 def ob_in_track(mhw,caster,add_src=None,armature=None,o2=None,report=None):
+
     if add_src==None:
         for i,o in enumerate(mhw.copy_src_track):
 
@@ -166,7 +187,7 @@ def ob_in_track(mhw,caster,add_src=None,armature=None,o2=None,report=None):
                         #report.report({'INFO'},str(o.obje)+' =? '+str(ob)+' > '+str(o.armature))
                         #report.report({'INFO'},str(o.armature)+' =? '+str(armature) )
                     
-                    return o if o.o2!=None else None
+                    return o  #if o.o2!=None else None
     else:
         nob=mhw.copy_src_track.add()
         nob.caster=caster
@@ -176,10 +197,9 @@ def ob_in_track(mhw,caster,add_src=None,armature=None,o2=None,report=None):
         if o2!=None:
             nob.o2=o2
             nob.name=o2.name
-        if caster.get('Type') and caster['Type'] in editable_types:
+        if caster.get('Type'):# and caster['Type'] in editable_types:
             nob.ttype=caster['Type']
         elif caster.get('boneFunction'):nob.ttype='Bone'
-
         #print('New object track %s'%ob.name)
         return nob
     return None

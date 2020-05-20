@@ -3,7 +3,7 @@ from bpy.props import StringProperty,PointerProperty,IntProperty,BoolProperty
 from bpy.types import Operator
 
 sys.path.append("..")
-from general_functions import all_heir
+from general_functions import all_heir,reeport
 def remove_ctc_copy(self,context,var1):
     pass
 
@@ -32,12 +32,18 @@ class SimpleConfirmOperator(Operator):
         delwhat=eval(delwhat)
         to_rem=delwhat[delnum]
         to_rem_name=to_rem.name
+        bremoved=[]
         if delhow=='delete_ctc':
             for o in to_rem.copy_src_track: #[a for a in to_rem.copy_src_track if a.is_new]:
-                if (o.ttype=='Header' and not self.header_remove) or (o.ttype=='Bone' and o.bone_id<150):continue
                 if o.ttype=='Bone' and self.keep_bones:continue
-                if o.o2!=None:bpy.data.objects.remove(o.o2)
+                if (o.ttype=='CTC' and not self.header_remove) or (o.o2.get('boneFunction') and o.bone_id<150):continue
+                
+                if o.o2!=None:
+                    bremoved.append(o.o2.name)
+                    bpy.data.objects.remove(o.o2)
+                    
             self.report({'INFO'},'Removed a CTC Copy Set: %s'%to_rem.source.name)
+            self.report({'INFO'},'Removed objects: %s'%bremoved)
 
         delwhat.remove(delnum)
         scene.update()
@@ -104,7 +110,8 @@ class CopyObjectChangeVG(Operator):
             oNum=source_dic.get(vgn)
             if oNum!=None and tar_dic.get(oNum):
                 vg.name=vgg=tar_dic[oNum].name
-                if self.addLR:
+                if self.addLR and oNum>=150:
+                    print(oNum,vg.name)
                     if all(not vg.name.endswith(x) for x in ['.L','.R']):
                         tbone_X=tar_dic[oNum].matrix_world.to_translation()[0]
                         

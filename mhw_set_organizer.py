@@ -15,7 +15,7 @@ from operators.usual_operators import *
 from re import findall
 from bpy.props import EnumProperty,StringProperty,BoolProperty,FloatProperty,IntProperty,CollectionProperty,PointerProperty
 from bpy.types import PropertyGroup,Operator
-from mathutils import Matrix
+from mathutils import Matrix,Vector
 
 json_savepath=base_dir+'\\MhwSettings.json'
 
@@ -48,11 +48,12 @@ class ob_copy_track(PropertyGroup):
     edit_view=BoolProperty(default=0)
     ttype=StringProperty()
     is_new=BoolProperty()
-    bone_id=IntProperty(default=0)
-    changed_id=IntProperty(default=0)
+    bone_id=IntProperty()
+    changed_id=IntProperty()
     VG=CollectionProperty(type=ob_copy_VG)
     id_name=StringProperty()
-    #vertex_group=PointerProperty(type=bpy.types.VertexGroup)
+    #cons=PointerProperty(type=bpy.types.Constraint)
+
 class ctc_copy_sources(PropertyGroup):
     name=StringProperty()
     source=PointerProperty(type=bpy.types.Object)
@@ -214,7 +215,7 @@ def SaveSettings(context):
         for p in mhw.append_dirs:
             if p.path!='' and p.path not in append_paths:append_paths.append(p.path)
                     
-    savedump['Global Settings']={'gamepath':scene.mhwsake.gamepath}
+    savedump['Global Settings']={'gamepath':scene.mhwsake.gamepath,'resource_path':scene.mhwsake.resource_path}
     if os.path.exists(json_savepath):
         with open(json_savepath,'r') as jsav:to_upd=json.load(jsav)
         append_paths.extend(to_upd['Global Settings']['BlendAppendPaths'])
@@ -383,11 +384,12 @@ class ctcO():
     def set_parent(self,parent):
         if not self.ex('parent'):self.parent=parent
 
-def CopyCTC(self,context,copy_from):
+def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever Seen.
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
     found_root=None
+    
     if mhw.ctc_copy_use_active:
         target=scene.active_object if _set.empty_root==None else _set.empty_root
     else:
@@ -493,7 +495,18 @@ def CopyCTC(self,context,copy_from):
     ctcO.obs={'Bone':{},'Header':{},'Frame':{},'Chain':{},'Node':{}}
     
     total_list=bone_additional+_src
-    
+    b_locs={}
+    for bo in bone_additional:
+        bm=bo.matrix_world.to_translation()
+        b_locs[bo]=[bm,Vector([-bm[0],bm[1],bm[2]])]
+        
+    def find_mirror(o,b_locs):
+        if b_locs.get(o)==None or b_locs[o][0][0]==0:return False
+        myX=b_locs[o][1]
+        closest=[[myX-b_locs[x][0],x['boneFunction']] for x in b_locs if x!=o]
+        closest.sort(key=lambda x:x[0])
+        return closest[0][1]
+    list_max_id2=[]
     for isr,o in enumerate(_src ):
         if o.get('Type') and o['Type']=='CTC_Node':
             pco=[a for a in o.constraints if a.type=='CHILD_OF']
@@ -505,10 +518,10 @@ def CopyCTC(self,context,copy_from):
             total_list.insert(0,nodebone)
             if nodebone.parent!=None and nodebone.parent not in total_list:total_list.insert(0,nodebone.parent)
             
-            max_id2=nodebone['boneFunction']
+            list_max_id2.append(nodebone['boneFunction'])
         if header_tar==None and o.get('Type') and o['Type']=='CTC':
             header_tar=o
-    
+    max_id2=max(list_max_id2) if list_max_id2!=[] else 0
     order=total_list[:]
     total_list=sorted(list(set(total_list)),key=lambda x:order.index(x))
     #remove doubles,preserve sort order, crucial else parenting is messed, is a current flaw ^
@@ -520,18 +533,28 @@ def CopyCTC(self,context,copy_from):
         for a in xx.copy_src_track:
             if a.ttype!='Bone' or a.bone_id==0:continue
             b_ids[a.bone_id]=a
-            if a.changed_id!=0:changed_ids[a.changed_id]=a
-    #parenting={changed_ids[z] if changed_ids.get(z) else b_ids[z] for z in 
-    #arma_re[0]=_set.empty_root
+            if a.changed_id!=0:changed_ids[a.bone_id]=a
+            if a.ttype=='CTC':
+                header_tar=a.caster
+                if header_tar.name not in scene.objects:scene.objects.link(header_tar)
+    pairs,frame_props,to_parent={},{},{}
+    li=bpy.data.libraries.data.objects
     for isr,o in enumerate(total_list):
         if o==None:continue
+        om=o.matrix_world.copy()
+        
+        
+        
         if o.get('Type') and regular_ctc_names.get(o['Type']):tty=regular_ctc_names[o['Type']]
         else:tty='Bone'
+        #reeport(self,o=o.name,typee=tty)
         if header_tar!=None and header_tar!=o and tty=='Header':
             _o2=ctcO(tty=tty,o=o,o2=header_tar)
             ctctrack[o]=_o2
             o2track=ob_in_track(ctc_col,o,armature=target,report=self)
-            if o2track==None:ob_in_track(ctc_col,o,source,target,header_tar)
+            if o2track==None:o2track=ob_in_track(ctc_col,o,source,target,header_tar)
+            ctctrack[o]=o2track
+            #self.report({'INFO'},'HEADER %s'%header_tar.name)
             continue
         
         if text_new=='':
@@ -539,54 +562,65 @@ def CopyCTC(self,context,copy_from):
             
         else:
             obn='%s%s'%(text_new,count_types[tty] if tty!='Header' else '')
-            count_types[tty]+=1
-        if tty not in o.name:obn='%s_%s'%(tty,obn) if not mhw.type_infront else '%s_%s'%(obn,tty)
+        rem_num=findall(r'\.[0-9]*',obn)
+        if rem_num and rem_num[0]!='.':obn=obn.replace(rem_num[0],'')
+        osp=o.name.split('.')
+        ext='.R' if '.R' in o.name else '.L' if '.L' in o.name else ''
+        count_types[tty]+=1
+        if tty not in obn:obn='%s_%s'%(tty,obn) if not mhw.type_infront else '%s_%s'%(obn,tty)
         new,o2=0,None
+        if mhw.ctc_copy_add_LR:
+            obn=obn.replace(ext,'')
+            ext=''
         o_id=o_id_b=o.get('boneFunction')
-        
+        #if changed_ids.get(o_id):o_id=changed_ids[o_id].changed_id
         o2track=ob_in_track(ctc_col,o,armature=target,report=self)
-        bone_already=0
+
         if tty=='Bone':
-            if source_bone_hie.get(o_id)==None:
-                continue
-            pid=source_bone_hie[o_id]
-            if b_ids.get(o_id):
+            if changed_ids.get(o_id):
+                o2track=changed_ids[o_id]
+                o2=o2track.o2
+            elif b_ids.get(o_id):
                 o2track=b_ids[o_id]
                 o2=o2track.o2
-                bone_already=1
-            elif arma_re.get(o_id):
+            elif arma_re.get(o_id) and o_id<150:
                 o2=arma_re[o_id]
-                o2track=ob_in_track(ctc_col,o,source,target,o2)
-                bone_already=1
-
-        if bone_already==0:
-                if o2track!=None:# here we check if object was copied in other sessions, if so, new one is not made
-                    o2=o2track.o2
-                else:
-                    new=1
-                    rem_num=findall(r'\.[0-9]*',obn)
-                    if rem_num and rem_num[0]!='.':obn=obn.replace(rem_num[0],'')
-                    #self.report({'INFO'},str(rem_num)+' %s %s'%(o.name,obn))
-                    if _obs.get(obn):
-                        nnum=1
-                        while _obs.get(obn+'.%03d'%nnum):
-                            nnum+=1
-                        obn=obn+'.%03d'%nnum
-                    o2=new_ob(obn)
+                if o2track==None:
                     o2track=ob_in_track(ctc_col,o,source,target,o2)
-        o2track.is_new=new
-        _o2=ctcO(tty=tty,o=o,o2=o2,bone_id=o_id)
-        ctctrack[o]=_o2
-        if o_id!=None:o2track.bone_id=o_id
-        b_ids[o_id]=o2track
-        if o_id==13:continue
-        if 1+1==2:
+        
+        if o2track==None:
+            new=1
+            obx=obn#=obn.replace(ext,'')
+            #
+            if o_id_b!=None and mhw.ctc_copy_add_LR and o_id_b>150 and ext=='':
+                obn=obn.replace('.R','').replace('.L','')
+                if  all(not obn.endswith(x) for x in ['.L','.R']) and ext=='':
+                    tbone_X=om.to_translation()[0]
+                    if tbone_X<0:ext='.R'
+                    elif tbone_X>0:ext='.L'
+            obn=obn+ext
+            if bpy.data.objects.get(obn)!=None or li.get(obn)!=None:
+                nnum=1
+
+                while bpy.data.objects.get(obn)!=None  or li.get(obn)!=None:
+                    nn='.%03d'%nnum
+                    obn=obx+nn+ext
+                    nnum+=1
+                #obn=obn+'.%03d%s'%(nnum,ext)
+            else:obn=obn
+            # if tty=='Bone' and 
+            #if arma_re.get(o_id_b) and tty=='Bone' and o2==None and o_id_b<150:o2=arma_re[o_id_b]
+            if o2==None:
+                o2=new_ob(scene,obn)
+            o2track=ob_in_track(ctc_col,o,source,target,o2)
+            
             if tty=='Bone':
-                o2track.id_name='boneFunction'
-                if o_id >= 150 and arma_re.get(o_id)!=None and o2track.is_new==1:
-                    #shift the boneFunction,but only if it was not before
-                    
-                    if o2track.changed_id==0:#check if was shifted in previous sessions
+                #reeport(self,bo=o2.name,id=o_id)
+                o2track.bone_id=o_id
+                pid=source_bone_hie[o_id]
+                if o_id >= 150 and arma_re.get(o_id)!=None: #and o2track.is_new==1:
+                   
+                    if o2track.changed_id==0:
                         o_id=fmax
                         o2track.changed_id=fmax
                         self.report({'INFO'},'Shifted boneFunction %s to %s (%s)'%(o['boneFunction'],o_id,o2.name))
@@ -594,97 +628,67 @@ def CopyCTC(self,context,copy_from):
                         
                     else:
                         o_id=o2track.changed_id
-                
-                if changed_ids.get(pid):
-                    _o2.set_parent(changed_ids[pid].o2)
-                elif b_ids.get(pid):_o2.set_parent(b_ids[pid].o2)
-                elif arma_re.get(o_id):
-                    _o2.set_parent(arma_re[o_id])
-
-            if ctctrack.get(o.parent):
-                _o2.set_parent(ctctrack[o.parent].o2)
-            
-            if _o2.parent!=None:
-                try:
-                    o2.parent=_o2.parent
-                except:
-                    pass
-            copy_various_props(o,o2)
-            if tty=='Bone':
-                o2.parent=None
-                o2.matrix_world=o.matrix_world.copy()
-                o2['boneFunction']=o2track.changed_id if o2track.changed_id!=0 else o2track.bone_id #overwrite copied Bone props in case boneFunction was shifted
-                ntrack=o2.name
-                scene.update()
-            if o_id_b!=None and mhw.ctc_copy_add_LR and o_id_b>150:
-
-                if  all(not o2.name.endswith(x) for x in ['.L','.R']):
-                    tbone_X=o2.matrix_world.to_translation()[0]
-                    
-                    o2.name=o2.name.replace('.R','').replace('.L','')
-                    if tbone_X<0:o2.name=o2.name+'.R'
-                    elif tbone_X>0:o2.name=o2.name+'.L'
-                if ntrack!=o2.name and tty=='Bone' and o_id_b<150:
-                    for i in [a for a in _set.eobjs if a.obje !=None]:
-                        if i.obje.vertex_groups.get(ntrack):i.obje.vertex_groups.remove(group=i.obje.vertex_groups[ntrack])
-            
-            if tty=='Bone':
-                
-                if mhw.ctc_copy_addVG and the_set!=None:
-                        for ob in [a for a in the_set.eobjs if a.obje!=None]:
-                            if ob.obje.vertex_groups.get(o2.name)==None:
-                                vg=ob.obje.vertex_groups.new(name=o2.name)
-                            else:vg=ob.obje.vertex_groups[o2.name]
-                            if not any(oo.obje==ob.obje  for oo in o2track.VG):
-                                ovg=o2track.VG.add()
-                                ovg.name=vg.name
-                                ovg.obje=ob.obje
-        scene.update()
-        if tty=='Frame':
-            bbo=b_ids[o['boneFunctionID']]
-            o2['boneFunctionID']=bbo.bone_id if bbo.changed_id==0 else bbo.changed_id
-            o2track.changed_id=bbo.changed_id
-            o2track.id_name='boneFunctionID'
-            o2.rotation_euler=o.rotation_euler
-    
-    
-    bones=ctcO.obs['Bone']
-    nodes=ctcO.obs['Node']
-    frames=ctcO.obs['Frame']
+        else:o2track.bone_id=o_id if o_id!=False else 0
+        # if changed_ids.get(pid):o2track.caster=changed_ids[pid]
+                # b_ids[o_id]=o2track
+        if tty=='Header':headerr=o2
+        ctctrack[o]=o2track
     if _set.ctc_header==None:
-        _set.ctc_header=list(ctcO.obs['Header'].values())[0].o2
-        self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
-    for bo in bones: #Check for missing parenting
-        _bo=ctcO.obs['Bone'][bo]
-        if _bo.o2==None:
-            continue 
-        if _bo.o2.parent==None:
-            if bo.parent!=None and bones.get(bo.parent):
-                pp=bones[bo.parent].o2
-                
-                if pp!=None:
-                    mcopy=_bo.o.matrix_world.copy()
-                    _bo.o2.parent=pp
-                    _bo.o2.matrix_world=mcopy
-    for node in nodes: #Add constraints to Nodes
-        _o2=nodes[node].o2
-        if _o2==None:continue
-        if nodes[node].con==None:
-            self.report({'WARNING'},'%s - could not find constraint.'%nodes[node].o.name)
-            continue
-        orig_tar=nodes[node].con.target
-        bonefind=bones.get(orig_tar)
-        if bonefind==None:continue
-        if _o2.constraints.get('Bone Function')==None:
-            cons=_o2.constraints.new(type='CHILD_OF')
-            cons.name='Bone Function'
-        else:cons=_o2.constraints['Bone Function']
-        cons.target=bones[bonefind.o].o2
-        cons.inverse_matrix =nodes[node].o.parent.matrix_world.inverted()#.inverted()#Matrix()
-        scene.update()
-    new_bonedict={x.name:bones[x].o2.name for x in bones if bones[x].bone_id>150}
+        _set.ctc_header=headerr
+        #self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
+    tracks=[a for a in ctc_col.copy_src_track]
+    tsort=['Bone','CTC','CTC_Chain','CTC_Node','CTC_*_Frame']
+    sorted_tracks=sorted(tracks,key=lambda x:tsort.index(x.get('ttype')) if x.get('ttype') in tsort else 9999)
+    #print(tracks)
+    new_bonedict={}
+    for i in sorted_tracks:
+        #if o==None or o2==None:continue
+        o,o2=i.caster,i.o2
+        #om=
+        #if i.bone_id==0 and i.ttype=='Bone':continue
+        pa=[a for a in ctc_col.copy_src_track if a.caster==o.parent]
+        if pa!=[]:
+            try:
+                o2.parent=pa[0].o2
+            except:
+                self.report({'WARNING'},'Could not set parent for %s for some reason :s !'%o2.name)
         
-    if _set.ctc_copy_weights:
+        else:
+            if i.bone_id>=150:
+                self.report({'WARNING'},'Could not find parent of %s!'%o2.name)
+        #o2.matrix_world=Matrix()
+        copy_various_props(o,o2)
+        #scene.update()
+        
+        if i.ttype=='Bone':
+            #if o.parent==None:
+            new_bonedict[o.name]=o2.name
+            o2.matrix_local=o.matrix_local.copy()
+            IDD=i.bone_id if i.changed_id==0 else i.changed_id
+            o2['boneFunction']=IDD
+            scene.update()
+        elif i.ttype=='CTC_*_Frame':
+            o2.rotation_euler=o.rotation_euler
+            fpar=[a for a in ctc_col.copy_src_track if o2.parent == a.o2]
+            if fpar!=[]:
+                kID=fpar[0].o2.constraints['Bone Function'].target['boneFunction']
+                o2['boneFunctionID']=kID
+        
+        elif i.ttype=='CTC_Node':
+            korig=o.constraints['Bone Function']
+            if o2.constraints.get('Bone Function')==None:
+                cons=o2.constraints.new(type='CHILD_OF')
+                cons.name='Bone Function'
+            else:cons=o2.constraints['Bone Function']
+            findbo=[a for a in ctc_col.copy_src_track if a.caster==korig.target]
+            cons.target=findbo[0].o2
+            cons.inverse_matrix = o2.parent.matrix_world.inverted()
+
+
+        scene.update()
+        
+        
+    if _set.ctc_copy_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
             if tag['Target']==[] or tag['Source']==[]:continue
@@ -764,7 +768,7 @@ def CopyCTC(self,context,copy_from):
                     
             for m in modif_state_save:m.show_viewport=modif_state_save[m]
             for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
-
+    
 class dpMHW_panel(bpy.types.Panel):
     """Creates a Panel in the Tool Shelf"""
     bl_label = "MOD3 Export Set Organizer"
@@ -783,6 +787,9 @@ class dpMHW_panel(bpy.types.Panel):
         sbox=row.box()
         row=sbox.row()
         row.prop(mhw,'gamepath',text='Game')
+        row=sbox.row()
+        row.prop(mhw,'resource_path',text='Import-Dir')
+        row=sbox.row()
         # gp=row.operator('scene.dpmhw_button',text='[+]')
         # gp.func='ApplySettingsToScenes'
         # gp.name='gamepath'
@@ -1133,6 +1140,8 @@ def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
                 add.num=num
         if settings:
             mhw.gamepath=jsr['Global Settings']['gamepath']
+            if 'resource_path' in jsr['Global Settings']:
+                mhw.resource_path=jsr['Global Settings']['resource_path']
             while len(mhw.append_dirs)>0:mhw.append_dirs.remove(0)
             for i in jsr['Global Settings']['BlendAppendPaths']:
                 if mhw.append_dirs.get(i)==None:
