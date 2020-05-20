@@ -161,7 +161,7 @@ class dpMHW_drawObjSet(bpy.types.UIList):
         _set=mhw.export_set[mhw.oindex]
 
         #l=layout.split(percentage=76,align=1)
-        layout.prop(item,"obje",icon=ik,text="")
+        layout.prop_search(item,"obje",bpy.context.scene,'objects',icon=ik,text="")
         
         layout.prop(item, "export", text="", emboss=0, icon=['RADIOBUT_OFF','RADIOBUT_ON'][item.export],expand=0)
         if _set.more_obj_options:

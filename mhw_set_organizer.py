@@ -33,7 +33,7 @@ class ob_copy_VG(PropertyGroup):
 class mhwExpSetObj(PropertyGroup):
     name=StringProperty()
     export=BoolProperty(default=1)
-    obje=PointerProperty(type=bpy.types.Object)
+    obje=PointerProperty(type=bpy.types.Object,poll=mesh_poll)
     to_copy=BoolProperty()
     tag=StringProperty()
     preserve_quad=BoolProperty(description='Make a copy of mesh on export and triangulate it, preserving original mesh')
