@@ -628,7 +628,7 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
                         
                     else:
                         o_id=o2track.changed_id
-        else:o2track.bone_id=o_id if o_id!=False else 0
+        else:o2track.bone_id=o_id if o_id!=None else 0
         # if changed_ids.get(pid):o2track.caster=changed_ids[pid]
                 # b_ids[o_id]=o2track
         if tty=='Header':headerr=o2
