@@ -632,6 +632,10 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
         o2track=ob_in_track(ctc_col,o,armature=target,report=self)
 
         if tty=='Bone':
+            mirror=find_mirror(o,b_locs)
+            if mirror:
+                if pairs.get(mirror+o_id):obn=pairs[mirror+o_id]
+                else:pairs[mirror+o_id]=obn
             if changed_ids.get(o_id):
                 o2track=changed_ids[o_id]
                 o2=o2track.o2
