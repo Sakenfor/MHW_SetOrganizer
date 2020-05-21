@@ -103,6 +103,7 @@ def upd_exp_path(self,context):
     self.export_path=exp_root+native_add+just_file_str.format(gender=self.gender,armorname2= armorname[2:],armor_part=self.armor_part)
 
 class mhwExpSet(PropertyGroup):
+
     name=StringProperty()
     oindex=IntProperty()
     eobjs=CollectionProperty(type=mhwExpSetObj)
@@ -139,6 +140,65 @@ class mhwExpSet(PropertyGroup):
         description = "Forces non-explicit 4 weight vertices into a 4 weight blocktype.",
         default = True)
 
+
+
+    clear_scene = BoolProperty(
+        name = "Clear scene before import.",
+        description = "Clears all contents before importing",
+        default = True)
+    maximize_clipping = BoolProperty(
+        name = "Maximizes clipping distance.",
+        description = "Maximizes clipping distance to be able to see all of the model at once.",
+        default = True)
+    high_lod = BoolProperty(
+        name = "Only import high LOD parts.",
+        description = "Skip meshparts with low level of detail.",
+        default = True)
+    import_header = BoolProperty(
+        name = "Import File Header.",
+        description = "Imports file headers as scene properties.",
+        default = True)
+    import_meshparts = BoolProperty(
+        name = "Import Meshparts.",
+        description = "Imports mesh parts as meshes.",
+        default = True)
+    import_unknown_mesh_props = BoolProperty(
+        name = "Import Unknown Mesh Properties.",
+        description = "Imports the Unknown section of the mesh collection as scene property.",
+        default = True)
+    import_textures = BoolProperty(
+        name = "Import Textures.",
+        description = "Imports texture as specified by mrl3.",
+        default = True)
+    import_materials = BoolProperty(
+        name = "Import Materials.",
+        description = "Imports maps as materials as specified by mrl3.",
+        default = False)
+    texture_path = StringProperty(
+        name = "Texture Source",
+        description = "Root directory for the MRL3 (Native PC if importing from a chunk).",
+        default = "")
+    import_skeleton = EnumProperty(
+        name = "Import Skeleton.",
+        description = "Imports the skeleton as an armature.",
+        items = [("None","Don't Import","Does not import the skeleton.",0),
+                  ("EmptyTree","Empty Tree","Import the skeleton as a tree of empties",1),
+                  ("Armature","Animation Armature","Import the skeleton as a blender armature",2),
+                  ],
+        default = "EmptyTree") 
+    weight_format = EnumProperty(
+        name = "Weight Format",
+        description = "Preserves capcom scheme of having repeated weights and negative weights by having multiple weight groups for each bone.",
+        items = [("Group","Standard","Weights under the same bone are grouped",0),
+                  ("Split","Split Weight Notation","Mirrors the Mod3 separation of the same weight",1),
+                  ("Slash","Split-Slash Notation","As split weight but also conserves weight order",2),
+                  ],
+        default = "Group")
+    override_defaults = BoolProperty(
+        name = "Override Default Mesh Properties.",
+        description = "Overrides program defaults with default properties from the first mesh in the file.",
+        default = False)
+    
 class mhwSetOfSetsObj(PropertyGroup):
     name=StringProperty()
     export=BoolProperty(default=1)
@@ -178,7 +238,7 @@ class dpMHW_help(PropertyGroup):
     export_set=CollectionProperty(type=mhwExpSet)
     export_setofsets=CollectionProperty(type=mhwSetOfSets)
     armor_num=CollectionProperty(type=mhwArmorNum)
-
+    show_import_options=BoolProperty()
     show_options=BoolProperty()
     show_setofsets=BoolProperty(default=0)
     show_main_sets=BoolProperty(default=1)
@@ -191,7 +251,7 @@ class dpMHW_help(PropertyGroup):
     ctc_copy_use_active=BoolProperty(description="Use active set's Root or active object")
     ctc_copy_add_LR=BoolProperty(default=1)
     ctc_copy_addVG=BoolProperty(default=1)
-    ctc_copy_wgt_src=PointerProperty(name='Weight Transfer Source',type=bpy.types.Object,poll=mesh_poll,description='Optional, object to transfer weights with')
+    #ctc_copy_wgt_src=PointerProperty(name='Weight Transfer Source',type=bpy.types.Object,poll=mesh_poll,description='Optional, object to transfer weights with')
     
     append_dirs=CollectionProperty(type=blenderAppend)
     show_dirs_paths=BoolProperty()
@@ -974,7 +1034,7 @@ class dpMHW_panel(bpy.types.Panel):
                 row2=sbox.row(align=1)
                 row2.prop(_set,'use_custom_path',text='Use Custom Export Path',icon='COPY_ID')
                 row2=sbox.row(align=1)
-                row2.prop(mhw,'show_options',text='Toggle more Options',icon_value=ico('show_options'))
+                row2.prop(mhw,'show_options',text='Export Options',icon_value=ico('show_options'))
                 if mhw.show_options:
                     row=sbox.row()
                     box2=row.box()
@@ -986,6 +1046,19 @@ class dpMHW_panel(bpy.types.Panel):
                     row.prop(_set,'highest_lod')
                     row=box2.row()
                     row.prop(_set,'coerce_fourth')
+                row2.prop(mhw,'show_import_options',text='Import Options',icon='IMPORT')
+                if mhw.show_import_options:
+                    row=sbox.row()
+          
+                    box=row.box()
+                    row=box.row()
+                    for v in ['clear_scene','maximize_clipping','high_lod','import_header',
+                    'import_meshparts','import_unknown_mesh_props','import_textures','import_materials',
+                    'texture_path','import_skeleton','weight_format','override_defaults']:
+                        row=box.row()
+                        row.prop(_set,v)
+                        
+                
                 row2=sbox.row(align=1)
                 row2.prop(_set,'show_ctc_manager',text="Copied CTC's Viewer (WIP)",icon='BOIDS')
                 if _set.show_ctc_manager:

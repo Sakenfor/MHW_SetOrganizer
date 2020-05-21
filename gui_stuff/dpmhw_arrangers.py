@@ -164,11 +164,14 @@ class dpMHW_drawObjSet(bpy.types.UIList):
         layout.prop_search(item,"obje",bpy.context.scene,'objects',icon=ik,text="")
         
         layout.prop(item, "export", text="", emboss=0, icon=['RADIOBUT_OFF','RADIOBUT_ON'][item.export],expand=0)
+
         if _set.more_obj_options:
             row=layout.row()
             row.prop(item,'tag',text='Tag')
             row.prop(item,'preserve_quad',text='',icon='MOD_TRIANGULATE')
-
+        if item.obje!=None:
+            layout.operator('dpmhw.uvsolves',text='',icon='GROUP_UVS').tar_ob=item.obje.name
+            layout.operator('dpmhw.safedoubleremove',text='',icon='VERTEXSEL').tar_ob=item.obje.name
     def invoke(self, context, event):        
         pass 
 

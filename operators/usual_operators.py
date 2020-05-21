@@ -1,11 +1,9 @@
-import bpy,os,sys
-from bpy.props import StringProperty,PointerProperty,IntProperty,BoolProperty
+import bpy,os,sys,bmesh
+from bpy.props import EnumProperty,StringProperty,PointerProperty,IntProperty,BoolProperty
 from bpy.types import Operator
 
 sys.path.append("..")
-from general_functions import all_heir,reeport
-def remove_ctc_copy(self,context,var1):
-    pass
+from general_functions import all_heir,reeport,new_ob
 
 
 class SimpleConfirmOperator(Operator):
@@ -145,10 +143,99 @@ class CopyObjectChangeVG(Operator):
         row.prop(self,'addLR',icon='STICKY_UVS_VERT',text='Add .R/.L to Bones/VGroups')
         row=self.layout
         row.prop(self,'remove_not_found',icon='CANCEL',text='Remove Bone-Not Found Grps')
-cls=[SimpleConfirmOperator,CopyObjectChangeVG
+
+
+class safeRemoveDoubles(Operator): 
+    """Safely merge double vertices, press shift to auto choose Split Normals"""
+    bl_idname = "dpmhw.safedoubleremove"
+    bl_label = "Safely Remove Double Vertices"
+    
+    pres_methods=[['Normals Split','Use the split normals modifier','MOD_NORMALEDIT'],
+    ['Normals Transfer','Use the transfer normals modifier','OBJECT_DATA']]
+    tar_ob=StringProperty()
+    pres_method=EnumProperty(items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(pres_methods)])
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+        
+    def execute(self, context):
+        if bpy.data.objects.get(self.tar_ob)!=None:
+            scene=context.scene
+            oob=bpy.data.objects[self.tar_ob]
+            selsave=context.selected_objects
+            aktsave=context.active_object
+            bpy.ops.object.select_all(action='DESELECT')
+            context.scene.objects.active=oob
+            oob.select=1
+            me2=oob.data.copy()
+            o2=new_ob(scene,'temporary_copydp',me2)
+            #stuff
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.remove_doubles()
+            bpy.ops.object.mode_set(mode='OBJECT')
+            scene.update()
+            mname='dpmhw_normals_pres'
+            if self.pres_method=='Normals Split':
+                m=oob.modifiers.new(mname,"NORMAL_EDIT")
+                m.target=o2
+                m.mode='DIRECTIONAL'
+                m.use_direction_parallel=1
+            elif self.pres_method=='Normals Transfer':
+                m = oob.modifiers.new(mname,"DATA_TRANSFER")
+                m.use_loop_data = True
+                m.loop_mapping = "NEAREST_POLYNOR"
+                m.data_types_loops = {'CUSTOM_NORMAL'}
+                m.object = o2
+            bpy.ops.object.modifier_apply(apply_as='DATA', modifier=mname)
+            
+            #end
+            for o in selsave:o.select=1
+            context.scene.objects.active=aktsave
+            bpy.data.objects.remove(o2)
+            scene.update()
+        return {'FINISHED'}
+    def invoke(self, context, event):
+        if event.shift:
+            self.pres_method='Normals Transfer'
+            return self.execute(context)
+        else:
+            return context.window_manager.invoke_props_dialog(self)
+    def draw(self, context):
+        row=self.layout
+        row.prop(self,'pres_method',text='Method')#,icon=self.pres_methods[self.pres_method[1]][2])
+
+class SolveRepeatedUVs(Operator): 
+    """Split mesh at UV Seams"""
+    bl_idname = "dpmhw.uvsolves"
+    bl_label = "Split UV Seam"
+    
+    tar_ob=StringProperty()
+
+    @classmethod
+    def poll(cls, context):
+        return True
+        
+    def execute(self, context):
+        if bpy.data.objects.get(self.tar_ob)!=None:
+            oob=bpy.data.objects[self.tar_ob]
+            selsave=context.selected_objects
+            aktsave=context.active_object
+            bpy.ops.object.select_all(action='DESELECT')
+            context.scene.objects.active=oob
+            oob.select=1
+            bpy.ops.mod_tools.solve_uv_rep()
+            for o in selsave:o.select=1
+            context.scene.objects.active=aktsave
+
+        return {'FINISHED'}
+    def invoke(self, context, event):
+        return self.execute(context)
+    def draw(self, context):
+        pass
+cls=[SimpleConfirmOperator,CopyObjectChangeVG ,SolveRepeatedUVs,safeRemoveDoubles,
 
 ]
-
 def register():
     for cl in cls:
         bpy.utils.register_class(cl)
