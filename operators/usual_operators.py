@@ -172,6 +172,7 @@ class safeRemoveDoubles(Operator):
             o2=new_ob(scene,'temporary_copydp',me2)
             #stuff
             bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.remove_doubles()
             bpy.ops.object.mode_set(mode='OBJECT')
             scene.update()
