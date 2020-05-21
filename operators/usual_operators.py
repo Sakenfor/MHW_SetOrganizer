@@ -3,7 +3,7 @@ from bpy.props import EnumProperty,StringProperty,PointerProperty,IntProperty,Bo
 from bpy.types import Operator
 
 sys.path.append("..")
-from general_functions import all_heir,reeport,new_ob
+from general_functions import all_heir,reeport,new_ob,upd_exp_path
 
 
 class SimpleConfirmOperator(Operator):
@@ -144,6 +144,88 @@ class CopyObjectChangeVG(Operator):
         row=self.layout
         row.prop(self,'remove_not_found',icon='CANCEL',text='Remove Bone-Not Found Grps')
 
+class MHW_ImportManager(Operator): 
+    """Import from Source, hold Shift to not prompt Options!"""
+    bl_idname = "dpmhw.import_manager"
+    bl_label = "Choose import options"
+
+    func=StringProperty()
+    var1=StringProperty()
+    ext=StringProperty()
+    all_options=['clear_scene','maximize_clipping','high_lod','import_header',
+        'import_meshparts','import_unknown_mesh_props','import_textures','import_materials',
+        'texture_path','import_skeleton','weight_format','override_defaults']
+    extd={'MOD3':'.mod3','CCL':'.ccl','CTC':'.ctc'}
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+        
+    def execute(self, context):
+        scene=context.scene
+        
+
+        _set=eval(self.var1)
+        ext=self.ext
+        upd_exp_path(_set,context)
+        path=_set.import_path+ext
+        
+        if not os.path.exists(path): 
+            
+            return {'FINISHED'}
+        if ext=='.mod3':
+            bpy.ops.custom_import.import_mhw_mod3(filepath=path,
+            clear_scene=_set.clear_scene,
+            maximize_clipping=_set.maximize_clipping,
+            high_lod=_set.high_lod,
+            import_header=_set.import_header,
+            import_meshparts=_set.import_meshparts,
+            import_unknown_mesh_props=_set.import_unknown_mesh_props,
+            import_textures=_set.import_textures,
+            import_materials=_set.import_materials,
+            texture_path=_set.texture_path,
+            import_skeleton=_set.import_skeleton,
+            weight_format=_set.weight_format,
+            override_defaults=_set.override_defaults,
+            
+            )
+        elif ext=='.ctc':
+            bpy.ops.custom_import.import_mhw_ctc(
+            filepath=path,
+            missingFunctionBehaviour=_set.ctc_missingFunctionBehaviour)
+        elif ext=='.ccl':
+            bpy.ops.custom_import.import_mhw_ccl(
+            filepath=path,
+            missingFunctionBehaviour=ccl_missingFunctionBehaviour,
+            scale=_set.ccl_scale
+            )
+        return {'FINISHED'}
+    def invoke(self, context, event):
+        self.ext=self.extd[self.func]
+        if event.shift:
+            return self.execute(context)
+        else:
+            return context.window_manager.invoke_props_dialog(self)
+ 
+    def draw(self, context):
+        scene=context.scene
+        _set=eval(self.var1)
+        if _set.clear_scene:
+            layout=self.layout
+            layout.label('NOTE: "clear scene" will erase all SETS data',icon='ERROR')
+        layout=self.layout
+        if self.ext=='.mod3':
+            for v in self.all_options:
+                row=layout.row()
+                row.prop(_set,v)
+        elif self.ext=='.ctc':
+            row=layout.row()
+            row.prop(_set,'ctc_missingFunctionBehaviour')
+        else:
+            row=layout.row()
+            row.prop(_set,'ccl_scale')
+            row=layout.row()
+            row.prop(_set,'ccl_missingFunctionBehaviour')
 
 class safeRemoveDoubles(Operator): 
     """Safely merge double vertices, press shift to auto choose Split Normals"""
@@ -236,8 +318,9 @@ class SolveRepeatedUVs(Operator):
         return self.execute(context)
     def draw(self, context):
         pass
-cls=[SimpleConfirmOperator,CopyObjectChangeVG ,SolveRepeatedUVs,safeRemoveDoubles,
-
+cls=[SimpleConfirmOperator,CopyObjectChangeVG ,
+SolveRepeatedUVs,safeRemoveDoubles,
+MHW_ImportManager,
 ]
 def register():
     for cl in cls:

@@ -1,12 +1,12 @@
 bl_info = {
     "name": "MHW Set Organizer",
     "author": "Sakenfor(dp16)",
-    "version": (1, 0),
+    "version": (1, 1),
     "blender": (2, 79, 0),
     "location": "View3D > MOD3 Tools",
-    "description": "Helps with various stuff.",
+    "description": "Easy export and organizing of export sets, objects.",
     "warning": "",
-    "wiki_url": "",
+    "wiki_url": "https://github.com/Sakenfor/MHW_SetOrganizer/wiki",
     "category": "Object",
     }
 

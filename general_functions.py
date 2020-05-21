@@ -64,14 +64,15 @@ def get_tags(_set,tag_dict=None,where=''):
                     tag_dict[ta][where].append(a.obje)
             return tag_dict
 
-def goto_set_dir(context):
+def goto_set_dir(context,ppath):
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
-    ppath=_set.export_path
-    if 'nativePC' in ppath:
-        ppath=ppath.replace(ppath.split('\\')[-1],'')
-    os.startfile(ppath)
+    #ppath=_set.export_path
+    #if 'nativePC' in ppath:
+    ppath=ppath.replace(ppath.split('\\')[-1],'')
+    if os.path.exists(ppath):os.startfile(ppath)
+        
     #todo, button that opens a directory of chosen set
 
 def ctc_edit_col_edit(self,context,var1):
@@ -210,6 +211,41 @@ def ctc_copy_over_props(self,context,col):
         if o.id_name!='':
             o.o2[o.id_name]=o.changed_id if o.changed_id!=0 else o.bone_id
     self.report({'INFO'},'Succesfully copied properties, preserving the altered boneFunctions, if there were any')
+
+native_str='\\nativePC\\pl\\{gender}_equip\\{armorname}\\{armor_part}\\mod\\'
+just_file_str='\\{gender}_{armor_part}{armorname2}'
+
+def upd_exp_path(self,context):
+    scene=context.scene
+    mhw=scene.mhwsake
+    batch_custom_path,batch_native_override=None,None
+    if mhw.oindex2<=len(mhw.export_setofsets) and len(mhw.export_setofsets)>0:
+        _sset=mhw.export_setofsets[mhw.oindex2]
+        if self.is_batch:
+            batch_custom_path=_sset.sets_path if _sset.use_sets_path==False else None
+            batch_native_override=_sset.nativePCappend
+    armorname=mhw.armor_num[self.armor_name].num if mhw.armor_num.get(self.armor_name) else '  ChooseArmor'
+    native=native_str.format(gender=self.gender,
+    armor_part=self.armor_part,
+    armorname=armorname,
+    )
+    native_check = self.nativePCappend if batch_native_override==None else batch_native_override
+    cp=self.custom_export_path if batch_custom_path==None else batch_custom_path
+    if cp!='' and os.path.exists(cp):
+        exp_root=cp
+        native_add='' if not native_check else native
+    else:
+        exp_root=mhw.gamepath
+        native_add=native
+    native_add=native_add if native not in exp_root else ''
+    just_file=just_file_str.format(gender=self.gender,armorname2= armorname[2:],armor_part=self.armor_part)
+    self.export_path=exp_root+native_add+just_file
+    self.import_path=mhw.resource_path+'/chunkG0/'+native.replace('\\nativePC\\','')+just_file
+def upd_base_paths(self,context):
+    scene=context.scene
+    mhw=scene.mhwsake
+    for _set in mhw.export_set:
+        upd_exp_path(_set,context)
 infos={'obj_info':
 '''You can put capsules in objects list too.
 Use black dot to toggle export on/off of per object.

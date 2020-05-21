@@ -74,33 +74,6 @@ class ctc_copy_sources(PropertyGroup):
     filter_bone=BoolProperty(default=1)
     info_when_closed=BoolProperty(description='Show some properties even if tab of object is closed')
 
-native_str='\\nativePC\\pl\\{gender}_equip\\{armorname}\\{armor_part}\\mod\\'
-just_file_str='\\{gender}_{armor_part}{armorname2}'
-
-def upd_exp_path(self,context):
-    scene=context.scene
-    mhw=scene.mhwsake
-    batch_custom_path,batch_native_override=None,None
-    if mhw.oindex2<=len(mhw.export_setofsets) and len(mhw.export_setofsets)>0:
-        _sset=mhw.export_setofsets[mhw.oindex2]
-        if self.is_batch:
-            batch_custom_path=_sset.sets_path if _sset.use_sets_path==False else None
-            batch_native_override=_sset.nativePCappend
-    armorname=mhw.armor_num[self.armor_name].num if mhw.armor_num.get(self.armor_name) else '  ChooseArmor'
-    native=native_str.format(gender=self.gender,
-    armor_part=self.armor_part,
-    armorname=armorname,
-    )
-    native_check = self.nativePCappend if batch_native_override==None else batch_native_override
-    cp=self.custom_export_path if batch_custom_path==None else batch_custom_path
-    if cp!='' and os.path.exists(cp):
-        exp_root=cp
-        native_add='' if not native_check else native
-    else:
-        exp_root=mhw.gamepath
-        native_add=native
-    native_add=native_add if native not in exp_root else ''
-    self.export_path=exp_root+native_add+just_file_str.format(gender=self.gender,armorname2= armorname[2:],armor_part=self.armor_part)
 
 class mhwExpSet(PropertyGroup):
 
@@ -124,6 +97,7 @@ class mhwExpSet(PropertyGroup):
     
     show_ctc_manager=BoolProperty()
     export_path=StringProperty()
+    import_path=StringProperty()
     is_batch=BoolProperty()
     
     copy_obj_src=PointerProperty(type=bpy.types.Object,poll=mesh_poll)
@@ -145,7 +119,7 @@ class mhwExpSet(PropertyGroup):
     clear_scene = BoolProperty(
         name = "Clear scene before import.",
         description = "Clears all contents before importing",
-        default = True)
+        default = False)
     maximize_clipping = BoolProperty(
         name = "Maximizes clipping distance.",
         description = "Maximizes clipping distance to be able to see all of the model at once.",
@@ -198,7 +172,28 @@ class mhwExpSet(PropertyGroup):
         name = "Override Default Mesh Properties.",
         description = "Overrides program defaults with default properties from the first mesh in the file.",
         default = False)
+    ctc_missingFunctionBehaviour = EnumProperty(
+            name = "Missing Bone Functions",
+            description = "Determines what to do while opening a file with missing bone functions",
+            items = [("Abort","Abort","Aborts importing process",0),
+                     ("Truncate","Truncate","Truncates the chain up to the offending node",1),
+                     ("Null","Null","Sets the constraint target to null and continues creating the chain",2)],
+            default = "Null"
+            )   
     
+    ccl_scale = FloatProperty(
+        name = "Multiply sphere radius" ,
+        description = "Multiply sphere radii (Factor of 2 according to Statyk)",
+        default = 1.0)    
+
+    ccl_missingFunctionBehaviour = EnumProperty(
+            name = "Missing Bone Functions",
+            description = "Determines what to do while opening a file with missing bone functions",
+            items = [("Abort","Abort","Aborts importing process",0),
+                     ("Omit","Omit","Omit the entire sphere",1),
+                     ("Null","Null","Sets the constraint target to null",2)],
+            default = "Null"
+            )    
 class mhwSetOfSetsObj(PropertyGroup):
     name=StringProperty()
     export=BoolProperty(default=1)
@@ -1005,12 +1000,50 @@ class dpMHW_panel(bpy.types.Panel):
                     armorname=mhw.armor_num[_set.armor_name].num
                     aktset+=' (%s)'%armorname
                 row=sbox.row()
-                row.label('%s, export:'%aktset,icon='ZOOM_SELECTED')
-                row=sbox.row(align=1)
+                zbox=row.box()
+                
+                row=zbox.row(align=1)
+                row.label('[%s], EXPORT:'%aktset,icon='ZOOM_SELECTED')
+                row=zbox.row(align=1)
                 row.operator('scene.dpmhw_button',text='MOD3',icon_value=ico('export')).func='MHW_Export'
                 row.operator('scene.dpmhw_button',text='CTC',icon='MOD_SIMPLEDEFORM').func='MHW_Export_CTC'
                 row.operator('scene.dpmhw_button',text='CCL',icon='META_CAPSULE').func='MHW_Export_CCL'
+                if _set.export_path!='':
+                    row2=zbox.row(align=1)
+                    row2.label(_set.export_path)
+                    goto=row2.operator('scene.dpmhw_button',text='',icon='FILE_FOLDER')
+                    goto.func,goto.var1='goto_set_dir',_set.export_path
+                row2=zbox.row(align=1)
+                row2.prop(mhw,'show_options',text='Export Options',icon_value=ico('show_options'))
+                if mhw.show_options:
+                    
+                    row=zbox.row()
+                    box2=row.box()
+                    row=box2.row()
+                    row.label('Per set options:')
+                    row=box2.row()
+                    row.prop(_set,'split_normals')
+                    row=box2.row()
+                    row.prop(_set,'highest_lod')
+                    row=box2.row()
+                    row.prop(_set,'coerce_fourth')
+                row=zbox.row(align=1)
                 
+                row.label('[%s], IMPORT: (click on any for Options prompt)'%aktset,icon='SCREEN_BACK')
+                row=zbox.row(align=1)
+                ope=row.operator('dpmhw.import_manager',text='MOD3',icon='IMPORT')
+                ope.func,ope.var1='MOD3','scene.%s'%_set.path_from_id()
+                ope=row.operator('dpmhw.import_manager',text='CTC',icon='IMPORT')
+                ope.func,ope.var1='CTC','scene.%s'%_set.path_from_id()
+                ope=row.operator('dpmhw.import_manager',text='CCL',icon='IMPORT')
+                ope.func,ope.var1='CCL','scene.%s'%_set.path_from_id()
+                row=zbox.row()
+                if _set.import_path!='':
+                    
+                    row2=zbox.row(align=1)
+                    row2.label(_set.import_path)
+                    goto=row2.operator('scene.dpmhw_button',text='',icon='FILE_FOLDER')
+                    goto.func,goto.var1='goto_set_dir',_set.import_path
                 
                 row2=sbox.row(align=1)
                 row2.label('Active Set Settings:',icon='FILE_TEXT')
@@ -1027,37 +1060,11 @@ class dpMHW_panel(bpy.types.Panel):
                 
                 row2.prop(_set,'custom_export_path',text='Custom Export Path')
                 row2.prop(_set,'nativePCappend',text='nativeAppend',icon='WORDWRAP_OFF')
-                row2=sbox.row(align=1)
-                row2.label(_set.export_path)
-                if _set.export_path!='':
-                    row2.operator('scene.dpmhw_button',text='',icon='FILE_FOLDER').func='goto_set_dir'
+
+
                 row2=sbox.row(align=1)
                 row2.prop(_set,'use_custom_path',text='Use Custom Export Path',icon='COPY_ID')
-                row2=sbox.row(align=1)
-                row2.prop(mhw,'show_options',text='Export Options',icon_value=ico('show_options'))
-                if mhw.show_options:
-                    row=sbox.row()
-                    box2=row.box()
-                    row=box2.row()
-                    row.label('Per set options:')
-                    row=box2.row()
-                    row.prop(_set,'split_normals')
-                    row=box2.row()
-                    row.prop(_set,'highest_lod')
-                    row=box2.row()
-                    row.prop(_set,'coerce_fourth')
-                row2.prop(mhw,'show_import_options',text='Import Options',icon='IMPORT')
-                if mhw.show_import_options:
-                    row=sbox.row()
-          
-                    box=row.box()
-                    row=box.row()
-                    for v in ['clear_scene','maximize_clipping','high_lod','import_header',
-                    'import_meshparts','import_unknown_mesh_props','import_textures','import_materials',
-                    'texture_path','import_skeleton','weight_format','override_defaults']:
-                        row=box.row()
-                        row.prop(_set,v)
-                        
+
                 
                 row2=sbox.row(align=1)
                 row2.prop(_set,'show_ctc_manager',text="Copied CTC's Viewer (WIP)",icon='BOIDS')
@@ -1195,6 +1202,7 @@ class dpMHW_panel(bpy.types.Panel):
                 col.operator("scene.dpmhw_obj_arranger", icon='TRIA_DOWN', text="").action = 'DOWN'
 
 def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
+    context=bpy.context
     if armor:
         with open(base_dir+'\\clothes_num.json','r') as jsr:dict=json.load(jsr)
     if settings:
@@ -1206,9 +1214,12 @@ def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
         mhw=scene.mhwsake
         if armor:
             while len(mhw.armor_num)>0:mhw.armor_num.remove(0)
+            dict['pl006_0000__Gajau']='Gajau'
             for i in dict:
                 add=mhw.armor_num.add()
                 num,name=i.split('__')
+                if '/' in num:num=num.split('/')[-1]
+               
                 add.name=name+' (%s)'%num
                 add.num=num
         if settings:
@@ -1221,13 +1232,15 @@ def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
                     padd=mhw.append_dirs.add()
                     padd.path=i
                     padd.name=i
+    upd_base_paths(None,context)
 # def reload_settings(scenelist=[]):
     # if os.path.exists(json_savepath):
        # with open(json_savepath,'r') as rp:jsr=json.load(rp)
        # if scenelist==[]:scenelist=[s for s in bpy.data.scenes]
        # for scene in scenelist:
             # mhw=scene.mhwsake
-
+def ImportBySet(self,context):
+    pass
 @persistent
 def post_load(scene):
 
@@ -1280,7 +1293,7 @@ class dpmhwButton(Operator):
         elif self.func=='refresh_armor_numbers':refresh_settings(settings=0,event=self.sevent)
         elif self.func=='reload_settings':refresh_settings(armor=0,event=self.sevent)
         elif self.func=='goto_set_dir': #not implemented yet, go to directory
-            goto_set_dir(context)
+            goto_set_dir(context,self.var1)
         elif self.func=='show_info':
             ShowMessageBox(infos[self.var1],'Info','MESH_CUBE')
         elif self.func=='BatchSetsExport':
