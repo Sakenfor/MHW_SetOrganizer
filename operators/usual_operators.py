@@ -165,12 +165,14 @@ class safeRemoveDoubles(Operator):
             oob=bpy.data.objects[self.tar_ob]
             selsave=context.selected_objects
             aktsave=context.active_object
-            bpy.ops.object.select_all(action='DESELECT')
-            context.scene.objects.active=oob
-            oob.select=1
+            
+
             me2=oob.data.copy()
             o2=new_ob(scene,'temporary_copydp',me2)
+            bpy.ops.object.select_all(action='DESELECT')
             #stuff
+            context.scene.objects.active=oob
+            oob.select=1
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.remove_doubles()
