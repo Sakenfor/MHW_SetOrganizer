@@ -255,6 +255,10 @@ class safeRemoveDoubles(Operator):
             #stuff
             context.scene.objects.active=oob
             oob.select=1
+            oob.select=1
+            osave=[oob.hide,oob.hide_select]
+            oob.hide=0
+            oob.hide_select=0
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.remove_doubles()
@@ -278,6 +282,7 @@ class safeRemoveDoubles(Operator):
             for o in selsave:o.select=1
             context.scene.objects.active=aktsave
             bpy.data.objects.remove(o2)
+            oob.hide,oob.hide_select=osave
             scene.update()
         return {'FINISHED'}
     def invoke(self, context, event):
@@ -309,10 +314,13 @@ class SolveRepeatedUVs(Operator):
             bpy.ops.object.select_all(action='DESELECT')
             context.scene.objects.active=oob
             oob.select=1
+            osave=[oob.hide,oob.hide_select]
+            oob.hide=0
+            oob.hide_select=0
             bpy.ops.mod_tools.solve_uv_rep()
             for o in selsave:o.select=1
             context.scene.objects.active=aktsave
-
+            oob.hide,oob.hide_select=osave
         return {'FINISHED'}
     def invoke(self, context, event):
         return self.execute(context)
