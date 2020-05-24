@@ -697,7 +697,7 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
         _set.ctc_header=headerr
         #self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
 
-    sorted_tracks=sort_the_tracks(ctc_col.copy_src_track)
+    sorted_tracks=sort_the_tracks(ctc_col)
     tr_all_wgt=1
 
     new_bonedict={}
@@ -1316,6 +1316,9 @@ def fix_ctc_ids(self,context,col):
 class dpmhwButton(Operator):
     bl_idname = "scene.dpmhw_button"
     bl_label = "Confirm?"
+    bl_options = {"REGISTER", "UNDO"} 
+
+    
     name=StringProperty()
     func=StringProperty()
     var1=StringProperty()

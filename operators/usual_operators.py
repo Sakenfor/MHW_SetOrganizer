@@ -315,7 +315,6 @@ class safeRemoveDoubles(Operator):
             #stuff
             context.scene.objects.active=oob
             oob.select=1
-            oob.select=1
             osave=[oob.hide,oob.hide_select]
             oob.hide=0
             oob.hide_select=0
