@@ -266,7 +266,7 @@ def ctc_copy_over_props(self,scene,col,bones_too=True):
         if o.id_name!='':
             if o.changed_id!=0: #TODO, improve this
                 o.o2[o.id_name]=o.changed_id if o.changed_id!=0 else o.bone_id
-            else:o.bone_id=o.caster['boneFunction']
+            elif o.caster.get('boneFunction')!=None:o.bone_id=o.caster['boneFunction']
         if o.ttype=='Bone' and bones_too:
             o.o2.matrix_local=o.caster.matrix_local.copy()
             scene.update()
