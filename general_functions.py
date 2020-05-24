@@ -60,7 +60,7 @@ def empty_root_poll(self,object):
 def mesh_poll(self,object):
     return object.type=='MESH'
 def has_att(ob,name,str1=None):
-    return ob.get(name) and (ob[name]==str1 and str1!=None)
+    return ob.get(name) and (str1!=None and ob[name]==str1)
 
 def get_tags(_set,tag_dict=None,where=''):
             tag_dict={} if tag_dict==None else tag_dict
@@ -235,6 +235,7 @@ def ctc_copy_over_props(self,scene,col,bones_too=True):
         if o.id_name!='':
             if o.changed_id!=0: #TODO, improve this
                 o.o2[o.id_name]=o.changed_id if o.changed_id!=0 else o.bone_id
+            else:o.bone_id=o.caster['boneFunction']
         if o.ttype=='Bone' and bones_too:
             o.o2.matrix_local=o.caster.matrix_local.copy()
             scene.update()

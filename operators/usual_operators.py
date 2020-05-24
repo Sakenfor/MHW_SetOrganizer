@@ -163,7 +163,6 @@ class CopyObjectChangeVG(Operator):
                 tar_dic[oNum].name=vg.name
                 old_vg_names[vgg]=vg.name
             elif self.remove_not_found:
-                reeport(self,num=oNum,vgn=vgn)
                 onew.vertex_groups.remove(group=vg)
         if old_vg_names!={}:
             for o in _set.eobjs:
