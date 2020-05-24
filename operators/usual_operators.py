@@ -150,7 +150,7 @@ class CopyObjectChangeVG(Operator):
         for vg in onew.vertex_groups:
             vgn=vg.name
             oNum=source_dic.get(vgn)
-            if oNum!=None and tar_dic.get(oNum):
+            if oNum!=None and tar_dic.get(oNum)!=None:
                 vg.name=vgg=tar_dic[oNum].name
                 if self.addLR and oNum>=150:
                     if all(not vg.name.endswith(x) for x in ['.L','.R']):

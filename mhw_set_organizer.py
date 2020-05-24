@@ -1288,31 +1288,7 @@ def post_load(scene):
     #can see it 'WTF' is printed twice.
 
 bpy.app.handlers.load_post.append(post_load)
-def fix_ctc_ids(self,context,col):
-    scene=context.scene
-    arma=col.empty_root
-    ctc=col.ctc_header
-    if arma ==None or ctc==None:return
-    arma_heir=all_heir(arma)
-    ctc_heir=all_heir(ctc)
-    arma_re={ob.get('boneFunction'):ob for ob in arma_heir}
-    #print(ctc_heir)
-    for no in ctc_heir:
-        
-        if no.get('Type')and no['Type']=='CTC_*_Frame':
-            
-            thenode=no.parent
-            kons=thenode.constraints['Bone Function']
-            if  kons.target==None:
-                nodnum=no['boneFunctionID']
-                if arma_re.get(nodnum):
-                    node_bone=arma_re[nodnum]
-                    kons.target=node_bone
-                    kons.inverse_matrix = thenode.parent.matrix_world.inverted()
-            else:
-                nodnum=kons.target['boneFunction']
-                no['boneFunctionID']=nodnum
-    scene.update()
+
 class dpmhwButton(Operator):
     bl_idname = "scene.dpmhw_button"
     bl_label = "Confirm?"

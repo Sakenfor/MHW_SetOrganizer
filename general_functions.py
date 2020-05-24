@@ -117,6 +117,37 @@ def reload_external_ctc(self,context):
                         ext.blend=blend
                    #bpy.context.scene.objects.link(obj) # Blender 2.7x
 
+
+def fix_ctc_ids(self,context,col):
+    scene=context.scene
+    arma=col.empty_root
+    ctc=col.ctc_header
+    if arma ==None or ctc==None:return
+    arma_heir=all_heir(arma)
+    ctc_heir=all_heir(ctc)
+    arma_re={ob.get('boneFunction'):ob for ob in arma_heir}
+    #print(ctc_heir)
+    for no in ctc_heir:
+        
+        if no.get('Type')and no['Type']=='CTC_*_Frame':
+            
+            thenode=no.parent
+            kons=thenode.constraints['Bone Function']
+            if  kons.target==None:
+                nodnum=no['boneFunctionID']
+                if arma_re.get(nodnum):
+                    node_bone=arma_re[nodnum]
+                    kons.target=node_bone
+                    kons.inverse_matrix = thenode.parent.matrix_world.inverted()
+            else:
+                if kons.target.get('boneFunction'):
+                    nodnum=kons.target['boneFunction']
+                    no['boneFunctionID']=nodnum
+                else:
+                    self.report({'WARNING'},'Could not find bone function in %s'%kons.target.name)
+    scene.update()
+
+
 def find_mirror(o,b_locs):
     if b_locs.get(o)==None or b_locs[o][0][0]==0:return False
     myX=b_locs[o][1]
