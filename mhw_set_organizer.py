@@ -38,7 +38,7 @@ class mhwExpSetObj(PropertyGroup):
     tag=StringProperty()
     preserve_quad=BoolProperty(description='Make a copy of mesh on export and triangulate it, preserving original mesh')
     apply_shape_keys=BoolProperty()
-
+    material_name=StringProperty()
 class ob_copy_track(PropertyGroup):
     name=StringProperty() #not needed, pretty sure
     caster=PointerProperty(type=bpy.types.Object)
@@ -88,6 +88,9 @@ class mhwExpSet(PropertyGroup):
     custom_export_path=StringProperty(subtype='FILE_PATH',update=upd_exp_path)
     use_custom_path=BoolProperty(update=upd_exp_path)
     more_obj_options=BoolProperty(default=1,name='More Object Options')
+    
+    header_copy_source=PointerProperty(name='Header',type=bpy.types.Object,poll=header_copy_poll)
+    ext_header_copy_name=StringProperty()
     
     ctc_header=PointerProperty(type=bpy.types.Object,poll=header_copy_poll)
     ctc_copy_src=CollectionProperty(type=ctc_copy_sources)
@@ -238,8 +241,7 @@ class dpMHW_help(PropertyGroup):
     show_setofsets=BoolProperty(default=0)
     show_main_sets=BoolProperty(default=1)
     
-    header_copy_source=PointerProperty(name='Header',type=bpy.types.Object,poll=header_copy_poll)
-    ext_header_copy_name=StringProperty()
+
     show_header_copy=BoolProperty(default=0)
     header_copy_name=StringProperty()
     header_new_names=StringProperty()
@@ -302,7 +304,7 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
         layersave=[a for a in scene.layers]
         valid_obs=[a.obje for a in _set.eobjs if a.export==1 and a.obje!=None and a.obje.name in obs]
         if expwhat=='CCL':
-            valid_obs=[a for a in valid_obs if a.get('Type') and a['Type']=='CCL']
+            valid_obs=[a.obje for a in valid_obs if a.get('Type') and a['Type']=='CCL']
     
     if expwhat!='CTC' and valid_obs==[] :
         ShowMessageBox('No objects to export.','Error','MESH_CUBE')
@@ -316,17 +318,22 @@ def MHW_Export(context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_cu
         uni_root=_set.empty_root
         uni_target='SkeletonRoot'
         
-        for o in [a  for a in _set.eobjs if a.preserve_quad and a.obje in valid_obs]:
-            quad_save[o.obje]=o.obje.data
-            mesh_tri=o.obje.data.copy()
-            bm = bmesh.new()
-            bm.from_mesh(mesh_tri)
-            bmesh.ops.triangulate(bm, faces=bm.faces)
-            bm.to_mesh(mesh_tri)
-            bm.free()
-            o.obje.data=mesh_tri
-            mesh_tri.update(calc_tessface=False)
-            scene.update()
+        for o in [a  for a in _set.eobjs if a.obje in valid_obs]:
+            
+            if o.preserve_quad:
+                quad_save[o.obje]=o.obje.data
+                mesh_tri=o.obje.data.copy()
+                bm = bmesh.new()
+                bm.from_mesh(mesh_tri)
+                bmesh.ops.triangulate(bm, faces=bm.faces)
+                bm.to_mesh(mesh_tri)
+                bm.free()
+                o.obje.data=mesh_tri
+
+                mesh_tri.update(calc_tessface=False)
+                scene.update()
+            if o.material_name!='' and len(o.material_name)>2:
+                o.obje.data['material']=o.material_name
     elif expwhat=='CTC':
         _ext='.ctc'
         uni_root=_set.ctc_header
@@ -463,10 +470,10 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
     header_tar=_set.ctc_header if _set.ctc_header!=None else None
 
     if copy_from=='Local':
-        source=mhw.header_copy_source
+        source=_set.header_copy_source
         src_heir=all_heir(source)
     else:
-        src=mhw.ext_header_copy_name
+        src=_set.ext_header_copy_name
         blendf,src_real=src.split('.blend__')
         portscene='ext_%s'%blendf
         srcol=mhw.extctc_src[src]
@@ -500,13 +507,12 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
                 proot=proot.parent
                 bone_additional.append(proot)
                 hier.append(proot)
-                #if proot==None:continue #or proot.parent==None:continue
-                #if proot.get('boneFunction')==None:continue
             if len(hier)<3:continue
             if found_root==None:
                 found_root=hier[-2]
                 src_bone_hier=all_heir(found_root)
-
+                src_arma={a:a.get('boneFunction') for a in src_bone_hier}
+                src_arma_re={a.get('boneFunction'):a for a in src_bone_hier}
     if copy_from!='Local':
         for h in bone_additional+src_heir:
             try:
@@ -555,12 +561,7 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
         bm=bo.matrix_world.to_translation()
         b_locs[bo]=[bm,Vector([-bm[0],bm[1],bm[2]])]
         
-    def find_mirror(o,b_locs):
-        if b_locs.get(o)==None or b_locs[o][0][0]==0:return False
-        myX=b_locs[o][1]
-        closest=[[myX-b_locs[x][0],x['boneFunction']] for x in b_locs if x!=o]
-        closest.sort(key=lambda x:x[0])
-        return closest[0][1]
+
     list_max_id2=[]
     for isr,o in enumerate(_src ):
         if o.get('Type') and o['Type']=='CTC_Node':
@@ -695,11 +696,16 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
     if _set.ctc_header==None:
         _set.ctc_header=headerr
         #self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
-    tracks=[a for a in ctc_col.copy_src_track]
-    tsort=['Bone','CTC','CTC_Chain','CTC_Node','CTC_*_Frame']
-    sorted_tracks=sorted(tracks,key=lambda x:tsort.index(x.get('ttype')) if x.get('ttype') in tsort else 9999)
-    #print(tracks)
+
+    sorted_tracks=sort_the_tracks(ctc_col.copy_src_track)
+    tr_all_wgt=1
+
     new_bonedict={}
+    if tr_all_wgt:
+        for sr in src_arma_re:
+            if sr==None:continue
+            if arma_re.get(sr):
+                new_bonedict[src_arma_re[sr].name]=arma_re[sr].name
     for i in sorted_tracks:
         #if o==None or o2==None:continue
         o,o2=i.caster,i.o2
@@ -743,10 +749,7 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
             cons.target=findbo[0].o2
             cons.inverse_matrix = o2.parent.matrix_world.inverted()
 
-
         scene.update()
-        
-        
     if _set.ctc_copy_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
@@ -792,6 +795,8 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
                     except:
                         self.report({'ERROR'},'Could not apply modifier %s on %s, probably a linked object.'%(mname,t.name))
                     if _set.normalize_active:
+                        t.select=1
+                        scene.update()
                         bpy.ops.object.mode_set(mode='EDIT')
                         bpy.ops.mesh.select_all(action='SELECT')
                         for vg in new_bonedict:
@@ -896,29 +901,31 @@ class dpMHW_panel(bpy.types.Panel):
         row.prop(mhw,'show_header_copy',text='Toggle View',icon='NLA')
         if mhw.show_header_copy:
             row=sbox.row(align=1)
-            row.prop_search(mhw,'header_copy_source',bpy.data,'objects',text='')
+            if _set:
+                row.prop_search(_set,'header_copy_source',bpy.data,'objects',text='')
 
-            ctcopy=row.operator('scene.dpmhw_button',text='Local Copy',icon='COPYDOWN')
-            ctcopy.func,ctcopy.var1='CopyCTC','Local'
-            #if len(mhw.extctc_src)>0:
-            row=sbox.row(align=1)
-
-            row.operator('scene.dpmhw_button',text='',icon='FILE_REFRESH').func='reload_external_ctc'
-
-            row.prop_search(mhw,'ext_header_copy_name',mhw,'extctc_src',text='',icon='PLUGIN')
-            ctcopy=row.operator('scene.dpmhw_button',text='External Copy',icon='APPEND_BLEND')
-            ctcopy.func,ctcopy.var1='CopyCTC','External'
-            row=sbox.row(align=1)
-
-            row.prop(_set,'ctc_copy_weights',icon='MOD_VERTEX_WEIGHT')
-            help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="")
-            help1.var1,help1.func='ctc_after_copy','show_info'
-            if _set.ctc_copy_weights:
-                row=sbox.row()
-                row.label('Save before CTC Copy, if toggling on these below!!!')
+                ctcopy=row.operator('scene.dpmhw_button',text='Local Copy',icon='COPYDOWN')
+                ctcopy.func,ctcopy.var1='CopyCTC','Local'
+                #if len(mhw.extctc_src)>0:
                 row=sbox.row(align=1)
-                row.prop(_set,'clean_after_ctc_copy',icon='SNAP_VERTEX')
-                row.prop(_set,'normalize_active',icon='SNAP_NORMAL')
+
+                row.operator('scene.dpmhw_button',text='',icon='FILE_REFRESH').func='reload_external_ctc'
+
+                row.prop_search(_set,'ext_header_copy_name',mhw,'extctc_src',text='',icon='PLUGIN')
+                ctcopy=row.operator('scene.dpmhw_button',text='External Copy',icon='APPEND_BLEND')
+                ctcopy.func,ctcopy.var1='CopyCTC','External'
+                row=sbox.row(align=1)
+
+                row.prop(_set,'ctc_copy_weights',icon='MOD_VERTEX_WEIGHT')
+                help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="")
+                help1.var1,help1.func='ctc_after_copy','show_info'
+                if _set.ctc_copy_weights:
+                    row=sbox.row()
+                    row.label('Save before CTC Copy, if toggling on these below!!!')
+                    row=sbox.row(align=1)
+                    row.prop(_set,'clean_after_ctc_copy',icon='SNAP_VERTEX')
+                    row.prop(_set,'normalize_active',icon='SNAP_NORMAL')
+                    
             row=sbox.row(align=1)
             row.prop(mhw,'header_copy_name',text='Prepend obj text')
             row.prop(mhw,'header_new_names',text='New Name')
@@ -1056,7 +1063,7 @@ class dpMHW_panel(bpy.types.Panel):
                 row2.prop(_set,'armor_part',text='',icon_value=ico(_set.armor_part),expand=0)
                 row2.prop(_set,'gender',text='',expand=0)
                 row2=sbox.row(align=1)
-                row2.prop_search(_set,'empty_root',context.scene,'objects',text='Root',icon='OUTLINER_OB_MESH')
+                row2.prop_search(_set,'empty_root',bpy.data,'objects',text='Root',icon='OUTLINER_OB_MESH')
                 row2=sbox.row(align=1)
                 row2.prop(_set,'ctc_header',text='CTC_header',icon='OUTLINER_OB_FORCE_FIELD')
                 row2=sbox.row(align=1)
@@ -1172,7 +1179,14 @@ class dpMHW_panel(bpy.types.Panel):
                 row2=sbox.row()
                 row2.prop(_set,'copy_obj_src',text='CopySrc')
                 row2.operator('dpmhw.copy_object',text='Copy Object',icon='COPYDOWN')
-
+                row2=sbox.row()
+                ctfix=row2.operator('scene.dpmhw_button',text='Fix CTC IDs',icon='HELP')
+                ctfix.func,ctfix.var1='fix_ctc_ids','scene.%s'%_set.path_from_id()
+                
+                row2.operator('dpmhw.empty_vg_renamer',text='Rename Empties and VG')
+                row2=sbox.row()
+                opup=row2.operator('dpmhw.update_ctc_users',text="Update all users of this set's CTC")
+                opup.var1='scene.%s'%_set.path_from_id()
             row=sbox.row()
             row.label(text='Choose/Add Active Set:',icon='COLLAPSEMENU')
             row=sbox.row()
@@ -1195,6 +1209,21 @@ class dpMHW_panel(bpy.types.Panel):
                 help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="") 
                 help1.var1,help1.func='obj_info','show_info'
                 row=sbox.row()
+                if _set.more_obj_options and len(_set.eobjs)>0:
+                    
+                    akt_ob=_set.eobjs[_set.oindex]
+                    if akt_ob.obje!=None:
+                        zbox=sbox.box()
+                        row=zbox.row()
+                        row.label("Active Set Object's settings:")
+                        row.label(akt_ob.name,icon='ALIASED')
+                        row=zbox.row()
+                        row.prop(akt_ob,'material_name',text="Mat",icon='MATCAP_14')
+                        row=zbox.row()
+                        row.prop(akt_ob,'tag',text="Tag(s)",icon='SYNTAX_OFF')
+                        
+                        row=sbox.row()
+
                 col = row.column(align=True)
                 
                 row.template_list("dpMHW_drawObjSet", "", _set, "eobjs", _set, "oindex", rows=rows)
@@ -1259,6 +1288,31 @@ def post_load(scene):
     #can see it 'WTF' is printed twice.
 
 bpy.app.handlers.load_post.append(post_load)
+def fix_ctc_ids(self,context,col):
+    scene=context.scene
+    arma=col.empty_root
+    ctc=col.ctc_header
+    if arma ==None or ctc==None:return
+    arma_heir=all_heir(arma)
+    ctc_heir=all_heir(ctc)
+    arma_re={ob.get('boneFunction'):ob for ob in arma_heir}
+    #print(ctc_heir)
+    for no in ctc_heir:
+        
+        if no.get('Type')and no['Type']=='CTC_*_Frame':
+            
+            thenode=no.parent
+            kons=thenode.constraints['Bone Function']
+            if  kons.target==None:
+                nodnum=no['boneFunctionID']
+                if arma_re.get(nodnum):
+                    node_bone=arma_re[nodnum]
+                    kons.target=node_bone
+                    kons.inverse_matrix = thenode.parent.matrix_world.inverted()
+            else:
+                nodnum=kons.target['boneFunction']
+                no['boneFunctionID']=nodnum
+    scene.update()
 class dpmhwButton(Operator):
     bl_idname = "scene.dpmhw_button"
     bl_label = "Confirm?"
@@ -1286,6 +1340,8 @@ class dpmhwButton(Operator):
                         ob.vertex_groups[w.name].name=col.o2.name
                         w.name=col.o2.name
 
+        
+        
     def execute(self,context):
         scene=context.scene
         #wiz=scene.Bwiz
@@ -1327,7 +1383,11 @@ class dpmhwButton(Operator):
             self.report({'INFO'},'Succesfully updated vertex groups names by the Bone(empty) names')
         elif self.func=='ctc_copy_over_props':
             col=eval(self.var1)
-            ctc_copy_over_props(self,context,col)
+            ctc_copy_over_props(self,context.scene,col)
+            scene.update()
+        elif self.func=='fix_ctc_ids':
+            col=eval(self.var1)
+            fix_ctc_ids(self,context,col)
         self.confirmer=False
         return {'FINISHED'}
         

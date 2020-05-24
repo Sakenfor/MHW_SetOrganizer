@@ -150,6 +150,8 @@ class dpMHW_drawSet(bpy.types.UIList):
     """Set drawing"""
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         layout.prop(item, "name", text="", emboss=False, icon_value=icon)
+        op=layout.operator('dpmhw.set_objects_toggler',text='',icon='GHOST_DISABLED')
+        op.var1='scene.%s'%item.path_from_id()
     def invoke(self, context, event):        
         pass  
         
@@ -167,7 +169,7 @@ class dpMHW_drawObjSet(bpy.types.UIList):
 
         if _set.more_obj_options:
             row=layout.row()
-            row.prop(item,'tag',text='Tag')
+            # row.prop(item,'tag',text='Tag')
             row.prop(item,'preserve_quad',text='',icon='MOD_TRIANGULATE')
         if item.obje!=None:
             layout.operator('dpmhw.uvsolves',text='',icon='GROUP_UVS').tar_ob=item.obje.name

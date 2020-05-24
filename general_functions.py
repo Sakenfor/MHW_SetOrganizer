@@ -13,10 +13,12 @@ def ObjProp(var,obj,val,descr,max=10.0,min=0.0):
           "soft_max":10.0,
           "is_overridable_library":0,
           }
+#Alternative to print, good when blender wants to spam constraint loop errors.
 def reeport(self,**args):
     rep=[]
     for s in args:rep.append(' %s: %s '%(s,args[s]))
     self.report({'INFO'},', '.join(a for a in rep))
+    
 def all_heir(ob, levels=10):
     oreturn=[]
     def recurse(ob, parent, depth):
@@ -27,14 +29,17 @@ def all_heir(ob, levels=10):
             recurse(child, ob,  depth + 1)
     recurse(ob, ob.parent, 0)
     return oreturn
+
 def find_col_index(name,collection):
     for i,st in enumerate(collection):
         if st.name==name:
             return i
     return None
+
 def copy_props(sors,tar):
     for k,v in sors.items():tar[k]=v
         #ObjProp(k,tar,v,'')
+
 def copy_various_props(o,o2):
     copy_props(o,o2)
     o2.empty_draw_type=o.empty_draw_type
@@ -47,6 +52,7 @@ def new_ob(scene,name,mesh=None,link=1):
         scene.objects.link(o)
         scene.update()
     return o
+
 def header_copy_poll(self,object):
     return object.get('Type') and object['Type']=='CTC'
 def empty_root_poll(self,object):
@@ -71,7 +77,8 @@ def goto_set_dir(context,ppath):
     #ppath=_set.export_path
     #if 'nativePC' in ppath:
     ppath=ppath.replace(ppath.split('\\')[-1],'')
-    if os.path.exists(ppath):os.startfile(ppath)
+    if not os.path.exists(ppath): os.makedirs(ppath)
+    os.startfile(ppath)
         
     #todo, button that opens a directory of chosen set
 
@@ -110,9 +117,15 @@ def reload_external_ctc(self,context):
                         ext.blend=blend
                    #bpy.context.scene.objects.link(obj) # Blender 2.7x
 
+def find_mirror(o,b_locs):
+    if b_locs.get(o)==None or b_locs[o][0][0]==0:return False
+    myX=b_locs[o][1]
+    closest=[[myX-b_locs[x][0],x['boneFunction']] for x in b_locs if x!=o]
+    closest.sort(key=lambda x:x[0])
+    return closest[0][1]
+
+
 def remove_unused_vg(ob):
-
-
     vgroup_used = {i: False for i, k in enumerate(ob.vertex_groups)}
     for v in ob.data.vertices:
         for g in v.groups:
@@ -125,6 +138,7 @@ def remove_unused_vg(ob):
                 ob.vertex_groups.remove(group=ob.vertex_groups[i])
             except:
                 pass
+
 types_icons={'CTC_*_Frame':'ORTHO',
 'CTC':'LOGIC',
 'CTC_Chain':'LINKED',
@@ -176,6 +190,7 @@ regular_ctc_names={'CTC_*_Frame':'Frame',
 'CTC':'Header',
 'CTC_Chain':'Chain',
 'CTC_Node':'Node'}
+
 def ob_in_track(mhw,caster,add_src=None,armature=None,o2=None,report=None):
 
     if add_src==None:
@@ -200,17 +215,37 @@ def ob_in_track(mhw,caster,add_src=None,armature=None,o2=None,report=None):
             nob.name=o2.name
         if caster.get('Type'):# and caster['Type'] in editable_types:
             nob.ttype=caster['Type']
-        elif caster.get('boneFunction'):nob.ttype='Bone'
+        elif caster.get('boneFunction'):
+            nob.ttype='Bone'
+            nob.id_name='boneFunction'
+        if caster.get('boneFunctionID'):
+            nob.id_name='boneFunctionID'
         #print('New object track %s'%ob.name)
         return nob
     return None
+def sort_the_tracks(to_sort):
+    tracks=[a for a in to_sort.copy_src_track]
+    tsort=['Bone','CTC','CTC_Chain','CTC_Node','CTC_*_Frame']
+    return sorted(tracks,key=lambda x:tsort.index(x.get('ttype')) if x.get('ttype') in tsort else 9999)
 
-def ctc_copy_over_props(self,context,col):
-    for o in col.copy_src_track:
+def ctc_copy_over_props(self,scene,col,bones_too=True):
+
+    for o in sort_the_tracks(col):
         copy_props(o.caster,o.o2)
         if o.id_name!='':
-            o.o2[o.id_name]=o.changed_id if o.changed_id!=0 else o.bone_id
-    self.report({'INFO'},'Succesfully copied properties, preserving the altered boneFunctions, if there were any')
+            if o.changed_id!=0: #TODO, improve this
+                o.o2[o.id_name]=o.changed_id if o.changed_id!=0 else o.bone_id
+        if o.ttype=='Bone' and bones_too:
+            o.o2.matrix_local=o.caster.matrix_local.copy()
+            scene.update()
+        elif o.ttype=='CTC_*_Frame':
+            o.o2.rotation_euler=o.caster.rotation_euler
+        elif o.ttype=='CTC_Node':
+            cons=o.o2.constraints.get('Bone Function')
+            if cons:
+                cons.inverse_matrix = o.caster.parent.matrix_world.inverted()
+                scene.update()
+    self.report({'INFO'},'Copied properties, preserving the altered boneFunctions, if there were any')
 
 native_str='\\nativePC\\pl\\{gender}_equip\\{armorname}\\{armor_part}\\mod\\'
 just_file_str='\\{gender}_{armor_part}{armorname2}'
