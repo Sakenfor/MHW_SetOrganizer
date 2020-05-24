@@ -150,6 +150,8 @@ class dpMHW_drawSet(bpy.types.UIList):
     """Set drawing"""
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         layout.prop(item, "name", text="", emboss=False, icon_value=icon)
+        in_set=[a for a in context.selected_objects if any(a==o.obje for o in item.eobjs if a!=None)]
+        if in_set!=[]:layout.label(text='[%s]'%len(in_set),icon='MESH_CUBE')
         op=layout.operator('dpmhw.set_objects_toggler',text='',icon='GHOST_DISABLED')
         op.var1='scene.%s'%item.path_from_id()
     def invoke(self, context, event):        
