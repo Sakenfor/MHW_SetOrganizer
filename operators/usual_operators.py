@@ -189,7 +189,7 @@ class CopyObjectChangeVG(Operator):
             bpy.data.meshes.remove(onew.data)
             bpy.data.objects.remove(onew)
             scene.update()
-            self.report({'INFO'},'Sucesfully replaced a mesh for '%(target.name))
+            self.report({'INFO'},'Sucesfully replaced a mesh for %s'%(target.name))
             # onew.name=onn
         source.hide,source.hide_select=hsave
         onew.data.name=onew.name
