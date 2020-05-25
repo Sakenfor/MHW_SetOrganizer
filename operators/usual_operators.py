@@ -176,6 +176,7 @@ class CopyObjectChangeVG(Operator):
         onew.select=1
         if not self.replace_mesh_only:
             onew.name='copy_%s'%onew.name if self.copy_name=='' else self.copy_name
+            onew.data.name=onew.name
             self.report({'INFO'},'Sucesfully made a copy of %s as %s.'%(source.name,onew.name))
         else:
             m2=onew.data.copy()
@@ -192,7 +193,7 @@ class CopyObjectChangeVG(Operator):
             self.report({'INFO'},'Sucesfully replaced a mesh for %s'%(target.name))
             # onew.name=onn
         source.hide,source.hide_select=hsave
-        onew.data.name=onew.name
+        
         
         self.partial_vg=''
         return {'FINISHED'}
