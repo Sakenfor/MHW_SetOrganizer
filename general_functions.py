@@ -53,6 +53,8 @@ def new_ob(scene,name,mesh=None,link=1):
         scene.update()
     return o
 
+def arma_poll(self,object):
+    return object.type=="ARMATURE"
 def header_copy_poll(self,object):
     return object.get('Type') and object['Type']=='CTC'
 def empty_root_poll(self,object):
@@ -64,7 +66,7 @@ def has_att(ob,name,str1=None):
 
 def get_tags(_set,tag_dict=None,where=''):
             tag_dict={} if tag_dict==None else tag_dict
-            for a in [z for z in _set.eobjs if z.tag!='' and z.obje!=None]:
+            for a in [z for z in _set.eobjs if z.tag!='' and z.obje!=None and z.accept_weight_transfer]:
                 for ta in [s for s in a.tag.split(',') if len(s)>1]:
                     if tag_dict.get(ta)==None:tag_dict[ta]={'Source':[],'Target':[]}
                     tag_dict[ta][where].append(a.obje)
@@ -117,6 +119,26 @@ def reload_external_ctc(self,context):
                         ext.blend=blend
                    #bpy.context.scene.objects.link(obj) # Blender 2.7x
 
+
+def weight_transfer(self,context,source,target,vmap="POLYINTERP_NEAREST"):
+    scene=context.scene
+    scene.objects.active=target
+    target.select=1
+    bpy.ops.object.mode_set(mode='OBJECT')
+    mname='%s%s'%(source.name,target.name)
+    if target.modifiers.get(mname)==None:
+        mm = target.modifiers.new(mname, type='DATA_TRANSFER')
+    else:mm=target.modifiers[mname]
+    mm.use_vert_data=True
+    mm.data_types_verts={'VGROUP_WEIGHTS'}
+    mm.vert_mapping=vmap
+    mm.object=source
+    
+    bpy.ops.object.datalayout_transfer(modifier=mname)
+    try:
+        bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mname)
+    except:
+        self.report({'ERROR'},'Could not apply modifier %s on %s, probably a linked object.'%(mname,target.name))
 
 def fix_ctc_ids(self,context,col):
     scene=context.scene
@@ -254,6 +276,7 @@ def ob_in_track(mhw,caster,add_src=None,armature=None,o2=None,report=None):
         #print('New object track %s'%ob.name)
         return nob
     return None
+
 def sort_the_tracks(to_sort):
     tracks=[a for a in to_sort.copy_src_track]
     tsort=['Bone','CTC','CTC_Chain','CTC_Node','CTC_*_Frame']
@@ -308,6 +331,7 @@ def upd_exp_path(self,context):
     just_file=just_file_str.format(gender=self.gender,armorname2= armorname[2:],armor_part=self.armor_part)
     self.export_path=exp_root+native_add+just_file
     self.import_path=mhw.resource_path+'/chunkG0/'+native.replace('\\nativePC\\','')+just_file
+
 def upd_base_paths(self,context):
     scene=context.scene
     mhw=scene.mhwsake

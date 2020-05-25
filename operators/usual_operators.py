@@ -3,7 +3,8 @@ from bpy.props import EnumProperty,StringProperty,PointerProperty,IntProperty,Bo
 from bpy.types import Operator
 from mathutils import Matrix,Vector
 sys.path.append("..")
-from general_functions import all_heir,reeport,new_ob,upd_exp_path,find_mirror,ctc_copy_over_props
+from general_functions import all_heir,reeport,new_ob,upd_exp_path
+from general_functions import  find_mirror,ctc_copy_over_props,copy_props,weight_transfer
 import random
 chrs = 'abvgddjezzijklmnjoprstcufhccdzsh0123456789'
 def rootfind(self,object):
@@ -74,7 +75,6 @@ class SimpleConfirmOperator(Operator):
         row.prop(self,"keep_bones",text="Keep ALL Bones?",icon='BONE_DATA')
         # row=self.layout
         # row.prop(self,'remove_vg',text='Remove Vertex Groups Associated?',icon='SNAP_VERTEX')
-
 class CopyObjectChangeVG(Operator):
     """Copy a object, changing the vertex group names"""
     bl_idname = "dpmhw.copy_object"
@@ -86,6 +86,7 @@ class CopyObjectChangeVG(Operator):
     copy_name=StringProperty()
     partial_vg=StringProperty()
     partial_mat=StringProperty()
+    replace_mesh_only=BoolProperty()
     @classmethod
     def poll(cls, context):
         return True
@@ -97,6 +98,7 @@ class CopyObjectChangeVG(Operator):
         _set=mhw.export_set[mhw.oindex]
         source=_set.copy_obj_src
         obs=bpy.data.objects
+        target=context.active_object
         if source==None or _set.empty_root==None:
             self.report({'ERROR'},'No source, or no Armature selected for Active Set!')
             return {'FINISHED'}
@@ -138,9 +140,9 @@ class CopyObjectChangeVG(Operator):
             onew=context.selected_objects[0]#context.active_object
             if bymat:
                 for i,m in enumerate(onew.material_slots):
-                    if m.name!=self.partial_mat:
-                        onew.active_material_index = i
-                        bpy.ops.object.material_slot_remove({'object': onew})
+                    if m.name!=self.partial_mat:m.material=None
+                        #onew.data.materials.pop(i, update_data=True)
+
             # if byvg:
                 # onew.vertex_groups.remove(group=onew.vertex_groups[self.partial_vg])
             # else:
@@ -172,10 +174,26 @@ class CopyObjectChangeVG(Operator):
         #scene.objects.link(onew)
         onew.hide=False
         onew.select=1
-        onew.name='copy_%s'%onew.name if self.copy_name=='' else self.copy_name
+        if not self.replace_mesh_only:
+            onew.name='copy_%s'%onew.name if self.copy_name=='' else self.copy_name
+            self.report({'INFO'},'Sucesfully made a copy of %s as %s.'%(source.name,onew.name))
+        else:
+            m2=onew.data.copy()
+            m2.name=target.name
+            target.data=m2
+            for v in target.vertex_groups:target.vertex_groups.remove(group=v)
+            target.data.update()
+            weight_transfer(self,context,onew,target,vmap="TOPOLOGY")
+            #copy_props(target,onew)
+            # onn=target.name
+            bpy.data.meshes.remove(onew.data)
+            bpy.data.objects.remove(onew)
+            scene.update()
+            self.report({'INFO'},'Sucesfully replaced a mesh for '%(target.name))
+            # onew.name=onn
         source.hide,source.hide_select=hsave
         onew.data.name=onew.name
-        self.report({'INFO'},'Sucesfully made a copy of %s as %s.'%(source.name,onew.name))
+        
         self.partial_vg=''
         return {'FINISHED'}
     def invoke(self, context, event):
@@ -186,6 +204,8 @@ class CopyObjectChangeVG(Operator):
         mhw=scene.mhwsake
         _set=mhw.export_set[mhw.oindex]
         source=_set.copy_obj_src
+        row = self.layout
+        row.prop(self,'replace_mesh_only',icon='MESH_DATA',text='Replace Mesh')
         row = self.layout
         row.prop(self,'copy_name',icon='SYNTAX_OFF',text="Copy's Name")
         row = self.layout
@@ -286,7 +306,7 @@ class MHW_ImportManager(Operator):
             row.prop(_set,'ccl_missingFunctionBehaviour')
 
 class safeRemoveDoubles(Operator): 
-    """Safely merge double vertices, press shift to auto choose Split Normals"""
+    """Safely merge double vertices, hold Shift to choose last chosen options!"""
     bl_idname = "dpmhw.safedoubleremove"
     bl_label = "Safely Remove Double Vertices"
     bl_options = {"REGISTER", "UNDO"} 
@@ -319,6 +339,7 @@ class safeRemoveDoubles(Operator):
             oob.hide_select=0
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.reveal()
             bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.remove_doubles()
             bpy.ops.object.mode_set(mode='OBJECT')
@@ -346,7 +367,7 @@ class safeRemoveDoubles(Operator):
         return {'FINISHED'}
     def invoke(self, context, event):
         if event.shift:
-            self.pres_method='Normals Transfer'
+            #self.pres_method='Normals Transfer'
             return self.execute(context)
         else:
             return context.window_manager.invoke_props_dialog(self)
@@ -386,46 +407,51 @@ class SolveRepeatedUVs(Operator):
     def draw(self, context):
         pass
 
+
 class emptyVGrenamer(Operator): 
     """Rename Empties and VG adding .R .L"""
     bl_idname = "dpmhw.empty_vg_renamer"
     bl_label = "Rename Empty and VG"
     bl_options = {"REGISTER", "UNDO"} 
     
-    tar_ob=StringProperty()
     uni_name=StringProperty()
-    source_arma=StringProperty()
-    tar_ob=StringProperty()
-    
     name_methods=[['Statyk Armature','Removes "Bone_" in bone names.','CONSTRAINT_BONE'],
     ['Raw Bone Names','What it says','BONE_DATA']]
-    
+
     bone_naming=EnumProperty(items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(name_methods)])
+
+    target_what_choice=[['Selected Objects','...','MESH_CUBE'],
+    ["All active set's objects",'...','OUTLINER_OB_GROUP_INSTANCE']]
     
+    target_what=EnumProperty(items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(target_what_choice)])
+
     @classmethod
     def poll(cls, context):
         return True
         
     def execute(self, context):
-        #if bpy.data.objects.get(self.tar_ob)!=None:
-                #for oob in context.selected_objects:
-                    #oob=bpy.data.objects[self.tar_ob]
-        oob=bpy.data.objects[self.tar_ob]
+        scene=context.scene
+        mhw=scene.mhwsake
+        arma=mhw.vg_rename_arma
         
-        arma=[a for a in oob.modifiers if a.type=='ARMATURE']
-        if arma==[]:return {'FINISHED'}
-        arma=arma[0]
-        arm=arma.object
-        if arm==None:return{'FINISHED'}
-        arma_dic={bo.get('boneFunction'):bo for bo in arm.pose.bones}
+        if len(mhw.export_set)>0:
+            _set=mhw.export_set(mhw.oindex)
+        else:_set=False
+        if _set and self.target_what=="All active set's objects":
+            obj_pool=[a.obje for a in _set.eobjs if a.obje!=None and a.obje.name in scene.objects]
+        elif self.target_what=='Selected Objects':
+            obj_pool=context.selected_objects
+        if obj_pool==[]:return {'FINISHED'}
+        
+        arma_dic={bo.get('boneFunction'):bo for bo in arma.pose.bones} if arma!=None else {}
         root=rootfind(self,oob)
         empties=all_heir(root)
         emp_dic={em.get('boneFunction'):em for em in empties}
         ext_fix={'_L':'.L','_R':'.R'}
-        b_locs={}
-        pairs={}
+        b_locs,pairs={},{}
         nameadd=self.uni_name if self.uni_name!='' else ''.join(random.choice(chrs) for _ in range(6))
         nameadd+='_'
+        
         for e in empties:
             if not e.get('boneFunction'):continue
             bf=e['boneFunction']
@@ -435,8 +461,6 @@ class emptyVGrenamer(Operator):
             if e.get('boneFunction')==None:continue
             bf=e['boneFunction']
             bone=arma_dic[bf] if arma_dic.get(bf)!=None else False
-            
-
             
             ext='.R' if '.R' in e.name else '.L' if '.L' in e.name else ''
             #if ext=='':
@@ -462,11 +486,11 @@ class emptyVGrenamer(Operator):
                 obn=obn.replace('Bone_','')
             #else:bnew=obn
 
-            for ss in context.selected_objects:
+            for ss in obj_pool:
                 if ss.vertex_groups.get(e.name):
                     ss.vertex_groups[e.name].name=obn
             e.name=obn
-
+        self.report({'INFO'},'Succesfully renamed vg/empties in: %s'%[a.name for a in obj_pool])
         return {'FINISHED'}
     def invoke(self, context, event):
         if context.active_object!=None:
@@ -474,12 +498,19 @@ class emptyVGrenamer(Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
+        # row=self.layout
+        scene=context.scene
+        mhw=scene.mhwsake
+        # row.prop_search(self,'tar_ob',context.scene,'objects',text='Target')
         row=self.layout
-        row.prop_search(self,'tar_ob',context.scene,'objects',text='Target')
+        row.prop(self,'bone_naming',text='Naming')
         row=self.layout
-        row.prop(self,'bone_naming')
+        row.prop(self,'target_what','Target(s)')
+        row=self.layout
+        row.prop(mhw,'vg_rename_arma','Arma')
         row=self.layout
         row.prop(self,'uni_name',text='PrependText')
+        
 class SetObjectsToggler(Operator):
     """Display all objects of this set (including ctc and arma), hiding all else"""
     bl_idname = "dpmhw.set_objects_toggler"
