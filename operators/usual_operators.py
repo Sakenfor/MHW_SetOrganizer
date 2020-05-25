@@ -17,8 +17,7 @@ def rootfind(self,object):
             while findroot!=None:
                 findroot=findroot.parent
                 findroots.append(findroot)
-            if len(findroots)>2:
-                findroot=findroots[-2]
+            findroot=findroots[-2]
             break
     return findroot
 
@@ -437,7 +436,7 @@ class emptyVGrenamer(Operator):
         arma=mhw.vg_rename_arma
         
         if len(mhw.export_set)>0:
-            _set=mhw.export_set(mhw.oindex)
+            _set=mhw.export_set[mhw.oindex]
         else:_set=False
         if _set and self.target_what=="All active set's objects":
             obj_pool=[a.obje for a in _set.eobjs if a.obje!=None and a.obje.name in scene.objects]
@@ -446,7 +445,7 @@ class emptyVGrenamer(Operator):
         if obj_pool==[]:return {'FINISHED'}
         
         arma_dic={bo.get('boneFunction'):bo for bo in arma.pose.bones} if arma!=None else {}
-        root=rootfind(self,oob)
+        root=rootfind(self,obj_pool[0])
         empties=all_heir(root)
         emp_dic={em.get('boneFunction'):em for em in empties}
         ext_fix={'_L':'.L','_R':'.R'}
@@ -559,6 +558,7 @@ class updateUsersOfCTC(Operator):
     all_sets=[]
     set_choosing=EnumProperty(items=set_choose_dynamic)
     bones_too=BoolProperty(default=1)
+    
     @classmethod
     def poll(cls, context):
         return True
