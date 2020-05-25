@@ -781,23 +781,6 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
                 for t in tag['Target']:
                     if t.name not in scene.objects:continue
                     weight_transfer(self,context,oco,t)
-                    # scene.objects.active=t
-
-                    # bpy.ops.object.mode_set(mode='OBJECT')
-                    # mname='%s%s'%(s.name,t.name)
-                    # if t.modifiers.get(mname)==None:
-                        # mm = t.modifiers.new(mname, type='DATA_TRANSFER')
-                    # else:mm=t.modifiers[mname]
-                    # mm.use_vert_data=True
-                    # mm.data_types_verts={'VGROUP_WEIGHTS'}
-                    # mm.vert_mapping="POLYINTERP_NEAREST"
-                    # mm.object=oco
-                    
-                    # bpy.ops.object.datalayout_transfer(modifier=mname)
-                    # try:
-                        # bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mname)
-                    # except:
-                        # self.report({'ERROR'},'Could not apply modifier %s on %s, probably a linked object.'%(mname,t.name))
                     if _set.normalize_active:
                         t.select=1
                         scene.update()
@@ -816,24 +799,8 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
             if _set.clean_after_ctc_copy:
                 
                 for o in valid_obs:
-                
-                    bpy.ops.object.select_all(action='DESELECT')
-                    o.obje.select=1
-                    scene.objects.active=o.obje
-                    scene.update()
-                    bpy.ops.object.mode_set(mode='OBJECT')
-                    remove_unused_vg(o.obje)
-                    bpy.ops.object.mode_set(mode='EDIT')
-                    bpy.ops.mesh.select_all(action='SELECT')
-                    ldata=o.obje.data['blockLabel']
-                    limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
-                    try:
-                        bpy.ops.object.vertex_group_limit_total(limit=limit)
-                    except:
-                        pass
-                    bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
-                    bpy.ops.object.mode_set(mode='OBJECT')
-                    
+                    weight_clean(self,context,o.obje)
+
             for m in modif_state_save:m.show_viewport=modif_state_save[m]
             for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
     

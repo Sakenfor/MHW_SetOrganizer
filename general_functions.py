@@ -1,4 +1,5 @@
 import bpy,glob,os
+from re import findall
 
 def ObjProp(var,obj,val,descr,max=10.0,min=0.0):
  if not obj==None:
@@ -29,6 +30,21 @@ def all_heir(ob, levels=10):
             recurse(child, ob,  depth + 1)
     recurse(ob, ob.parent, 0)
     return oreturn
+
+def remove_unused_vg(ob):
+    vgroup_used = {i: False for i, k in enumerate(ob.vertex_groups)}
+    for v in ob.data.vertices:
+        for g in v.groups:
+            if g.weight > 0.0:
+                vgroup_used[g.group] = True
+    
+    for i, used in sorted(vgroup_used.items(), reverse=True):
+        if not used:
+            try:
+                ob.vertex_groups.remove(group=ob.vertex_groups[i])
+            except:
+                pass
+
 
 def find_col_index(name,collection):
     for i,st in enumerate(collection):
@@ -119,7 +135,26 @@ def reload_external_ctc(self,context):
                         ext.blend=blend
                    #bpy.context.scene.objects.link(obj) # Blender 2.7x
 
-
+def weight_clean(self,context,object):
+    scene=context.scene
+    bpy.ops.object.select_all(action='DESELECT')
+    object.select=1
+    scene.objects.active=object
+    scene.update()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    remove_unused_vg(object)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    if object.data.get('blockLabel')!=None:
+        ldata=object.data['blockLabel']
+        limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
+        try:
+            bpy.ops.object.vertex_group_limit_total(limit=limit)
+        except:
+            pass
+    bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    
 def weight_transfer(self,context,source,target,vmap="POLYINTERP_NEAREST"):
     scene=context.scene
     scene.objects.active=target
@@ -178,19 +213,7 @@ def find_mirror(o,b_locs):
     return closest[0][1]
 
 
-def remove_unused_vg(ob):
-    vgroup_used = {i: False for i, k in enumerate(ob.vertex_groups)}
-    for v in ob.data.vertices:
-        for g in v.groups:
-            if g.weight > 0.0:
-                vgroup_used[g.group] = True
-    
-    for i, used in sorted(vgroup_used.items(), reverse=True):
-        if not used:
-            try:
-                ob.vertex_groups.remove(group=ob.vertex_groups[i])
-            except:
-                pass
+
 
 types_icons={'CTC_*_Frame':'ORTHO',
 'CTC':'LOGIC',

@@ -4,7 +4,7 @@ from bpy.types import Operator
 from mathutils import Matrix,Vector
 sys.path.append("..")
 from general_functions import all_heir,reeport,new_ob,upd_exp_path
-from general_functions import  find_mirror,ctc_copy_over_props,copy_props,weight_transfer
+from general_functions import  find_mirror,ctc_copy_over_props,copy_props,weight_transfer,weight_clean
 import random
 chrs = 'abvgddjezzijklmnjoprstcufhccdzsh0123456789'
 def rootfind(self,object):
@@ -141,7 +141,7 @@ class CopyObjectChangeVG(Operator):
             if bymat:
                 for i,m in enumerate(onew.material_slots):
                     if m.name!=self.partial_mat:m.material=None
-                        #onew.data.materials.pop(i, update_data=True)
+                    #Leaves a empty material slot, had issues with bpy.ops material slot remove.
 
             # if byvg:
                 # onew.vertex_groups.remove(group=onew.vertex_groups[self.partial_vg])
@@ -185,6 +185,7 @@ class CopyObjectChangeVG(Operator):
             for v in target.vertex_groups:target.vertex_groups.remove(group=v)
             target.data.update()
             weight_transfer(self,context,onew,target,vmap="TOPOLOGY")
+            weight_clean(self,context,target)
             #copy_props(target,onew)
             # onn=target.name
             bpy.data.meshes.remove(onew.data)
