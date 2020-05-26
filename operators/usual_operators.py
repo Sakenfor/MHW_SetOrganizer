@@ -75,7 +75,7 @@ class SimpleConfirmOperator(Operator):
         # row=self.layout
         # row.prop(self,'remove_vg',text='Remove Vertex Groups Associated?',icon='SNAP_VERTEX')
 class CopyObjectChangeVG(Operator):
-    """Copy a object, changing the vertex group names"""
+    """Copy/Replace a object, changing the vertex group names, copying properties if need, etc."""
     bl_idname = "dpmhw.copy_object"
     bl_label = "Copy Object"
     bl_options = {"REGISTER", "UNDO"} 
@@ -180,11 +180,19 @@ class CopyObjectChangeVG(Operator):
             onew.data.name=onew.name
             self.report({'INFO'},'Sucesfully made a copy of %s as %s.'%(source.name,onew.name))
         else:
+            
             m2=onew.data.copy()
-            m2.name=target.name
             if self.copy_props_too:
-                copy_props(target.data,m2) #Preserve Mesh Custom Properties on mesh swap
+                copy_props(onew.data,m2) 
+            else:
+                copy_props(target.data,m2)
+            m2.update()
+            m2.name=target.name
+            #if not self.copy_props_too:
+            
+                #Preserve Mesh Custom Properties on mesh swap
             target.data=m2
+            
             for v in target.vertex_groups:target.vertex_groups.remove(group=v)
             target.data.update()
             weight_transfer(self,context,onew,target,vmap="TOPOLOGY")
@@ -209,12 +217,11 @@ class CopyObjectChangeVG(Operator):
         mhw=scene.mhwsake
         _set=mhw.export_set[mhw.oindex]
         source=_set.copy_obj_src
-        row = self.layout
+        layout = self.layout
+        row=layout.row()
         row.prop(self,'replace_mesh_only',icon='MESH_DATA',text='Replace Mesh')
-        if self.replace_mesh_only:
-            row.prop(self,'copy_props_too',icon='PASTEDOWN',text='Copy Properties Too')
+        row.prop(self,'copy_props_too',icon='PASTEDOWN',text='Copy Properties Too')
         row = self.layout
-        
         row.prop(self,'copy_name',icon='SYNTAX_OFF',text="Copy's Name")
         row = self.layout
         row.prop(self,'addLR',icon='STICKY_UVS_VERT',text='Add .R/.L to Bones/VGroups')

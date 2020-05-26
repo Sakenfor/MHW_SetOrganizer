@@ -1149,7 +1149,7 @@ class dpMHW_panel(bpy.types.Panel):
                                             pp=row.prop(_o,'["%s"]'%prop)
                 row2=sbox.row()
                 row2.prop(_set,'copy_obj_src',text='CopySrc')
-                row2.operator('dpmhw.copy_object',text='Copy Object',icon='COPYDOWN')
+                row2.operator('dpmhw.copy_object',text='Copy/Replace Object',icon='COPYDOWN')
                 row2=sbox.row()
                 ctfix=row2.operator('scene.dpmhw_button',text='Fix CTC IDs',icon='HELP')
                 ctfix.func,ctfix.var1='fix_ctc_ids','scene.%s'%_set.path_from_id()
