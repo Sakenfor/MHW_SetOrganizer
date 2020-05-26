@@ -135,7 +135,8 @@ def reload_external_ctc(self,context):
                         ext.blend=blend
                    #bpy.context.scene.objects.link(obj) # Blender 2.7x
 
-def weight_clean(self,context,object):
+def weight_clean(self,context,object,do_normalize=0,do_limit=0,do_clean=0):
+    if all(x==0 for x in [do_normalize,do_limit,do_clean]):return
     scene=context.scene
     bpy.ops.object.select_all(action='DESELECT')
     object.select=1
@@ -145,7 +146,7 @@ def weight_clean(self,context,object):
     remove_unused_vg(object)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    if object.data.get('blockLabel')!=None:
+    if object.data.get('blockLabel')!=None and do_limit:
         ldata=object.data['blockLabel']
         limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
         try:
@@ -161,7 +162,14 @@ def weight_clean(self,context,object):
         except:
             self.report({'WARNING'},'Could not limit the weights of %s'%object.name)
             pass
-    bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
+    if do_clean:
+        bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
+        
+    if do_normalize:
+        bpy.ops.object.vertex_group_normalize_all(lock_active=False)
+
+    #bpy.ops.object.vertex_group_normalize_all(lock_active=False)
+    bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
     
 def weight_transfer(self,context,source,target,vmap="POLYINTERP_NEAREST"):
@@ -181,6 +189,7 @@ def weight_transfer(self,context,source,target,vmap="POLYINTERP_NEAREST"):
     bpy.ops.object.datalayout_transfer(modifier=mname)
     try:
         bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mname)
+
     except:
         self.report({'ERROR'},'Could not apply modifier %s on %s, probably a linked object.'%(mname,target.name))
 

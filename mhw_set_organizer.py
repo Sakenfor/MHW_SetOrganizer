@@ -776,33 +776,36 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
                 scene.objects.link(oco)
                 scene.update()
                 for w in oco.vertex_groups:
-                    if new_bonedict.get(w.name):w.name=new_bonedict[w.name]
+                    if new_bonedict.get(w.name):
+                        w.name=new_bonedict[w.name]
+                        # for tt in tag['Target']:
+                            # if tt.vertex_groups.get(w.name):
+                            # tt.vertex_groups.remove(group=s.vertex_groups[w.name])
                     else:oco.vertex_groups.remove(group=w)
                 for t in tag['Target']:
                     if t.name not in scene.objects:continue
                     weight_transfer(self,context,oco,t)
-                    if _set.normalize_active:
-                        t.select=1
-                        scene.update()
-                        bpy.ops.object.mode_set(mode='EDIT')
-                        bpy.ops.mesh.select_all(action='SELECT')
-                        for vg in new_bonedict:
-                            vgn=new_bonedict[vg]
-                            if t.vertex_groups.get(vgn):
-                                t.vertex_groups.active_index=t.vertex_groups.find(vgn)
-                                bpy.ops.object.vertex_group_normalize_all(lock_active=True)
-                        bpy.ops.object.mode_set(mode='OBJECT')
+                    # if _set.normalize_active:
+                        # t.select=1
+                        # scene.update()
+                        # bpy.ops.object.mode_set(mode='EDIT')
+                        # bpy.ops.mesh.select_all(action='SELECT')
+                        # for vg in new_bonedict:
+                            # vgn=new_bonedict[vg]
+                            # if t.vertex_groups.get(vgn):
+                                # t.vertex_groups.active_index=t.vertex_groups.find(vgn)
+                                # bpy.ops.object.vertex_group_normalize_all(lock_active=True)
+                        # bpy.ops.object.mode_set(mode='OBJECT')
                 
                 bpy.data.objects.remove(oco)
                 bpy.data.meshes.remove(mcopy)
-                
-            if _set.clean_after_ctc_copy:
-                
-                for o in valid_obs:
-                    weight_clean(self,context,o.obje)
 
-            for m in modif_state_save:m.show_viewport=modif_state_save[m]
-            for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
+        for t in tag['Target']:
+            weight_clean(self,context,t,do_normalize=_set.normalize_active,
+            do_limit=_set.normalize_active,do_clean=_set.clean_after_ctc_copy)
+
+        for m in modif_state_save:m.show_viewport=modif_state_save[m]
+        for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
     
 class dpMHW_panel(bpy.types.Panel):
     """Creates a Panel in the Tool Shelf"""

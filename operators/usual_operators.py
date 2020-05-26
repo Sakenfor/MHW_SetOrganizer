@@ -496,7 +496,7 @@ class emptyVGrenamer(Operator):
             if bone:
                 obn=nameadd+bone.name
                 if ext!='':
-                    obn=obn[:2]
+                    obn=obn[:2] if obn.count(ext)>1 else obn.replace(ext,'')
 
             if ext_fix.get(ext):ext=ext_fix[ext]
             obn=obn+ext
