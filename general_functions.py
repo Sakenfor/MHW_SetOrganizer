@@ -149,8 +149,17 @@ def weight_clean(self,context,object):
         ldata=object.data['blockLabel']
         limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
         try:
-            bpy.ops.object.vertex_group_limit_total(limit=limit)
+            bpy.ops.object.vertex_group_limit_total(limit=limit-1)
+            if limit==4: #Not fully sure if this can cause issues
+                object.data['unkn']=19
+                object.data['unkn2']=33
+                object.data['unkn3']=-61
+            elif limit==8:
+                object.data['unkn']=19
+                object.data['unkn2']=41
+                object.data['unkn3']=-61
         except:
+            self.report({'WARNING'},'Could not limit the weights of %s'%object.name)
             pass
     bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
     bpy.ops.object.mode_set(mode='OBJECT')

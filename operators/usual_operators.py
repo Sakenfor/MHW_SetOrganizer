@@ -86,6 +86,8 @@ class CopyObjectChangeVG(Operator):
     partial_vg=StringProperty()
     partial_mat=StringProperty()
     replace_mesh_only=BoolProperty()
+    copy_props_too=BoolProperty(description='The Mesh Custom Properties')
+    
     @classmethod
     def poll(cls, context):
         return True
@@ -180,6 +182,8 @@ class CopyObjectChangeVG(Operator):
         else:
             m2=onew.data.copy()
             m2.name=target.name
+            if self.copy_props_too:
+                copy_props(target.data,m2) #Preserve Mesh Custom Properties on mesh swap
             target.data=m2
             for v in target.vertex_groups:target.vertex_groups.remove(group=v)
             target.data.update()
@@ -207,7 +211,10 @@ class CopyObjectChangeVG(Operator):
         source=_set.copy_obj_src
         row = self.layout
         row.prop(self,'replace_mesh_only',icon='MESH_DATA',text='Replace Mesh')
+        if self.replace_mesh_only:
+            row.prop(self,'copy_props_too',icon='PASTEDOWN',text='Copy Properties Too')
         row = self.layout
+        
         row.prop(self,'copy_name',icon='SYNTAX_OFF',text="Copy's Name")
         row = self.layout
         row.prop(self,'addLR',icon='STICKY_UVS_VERT',text='Add .R/.L to Bones/VGroups')
@@ -479,8 +486,11 @@ class emptyVGrenamer(Operator):
                 else:
                     obn='%s%s'%(nameadd,mirror+bf)
                     pairs[mirror+bf]=obn
+            if bone:
+                obn=nameadd+bone.name
+                if ext!='':
+                    obn=obn[:2]
 
-            obn=nameadd+bone.name.replace(ext,'') if bone else obn
             if ext_fix.get(ext):ext=ext_fix[ext]
             obn=obn+ext
             if self.bone_naming=='Statyk Armature':
@@ -513,7 +523,7 @@ class emptyVGrenamer(Operator):
         row.prop(self,'uni_name',text='PrependText')
         
 class SetObjectsToggler(Operator):
-    """Display all objects of this set (including ctc and arma), hiding all else"""
+    """Display all objects of this set (including ctc and arma), hiding all else, +Shift to not hide"""
     bl_idname = "dpmhw.set_objects_toggler"
     bl_label = "Show objects"
     bl_options = {"REGISTER", "UNDO"} 
@@ -527,8 +537,9 @@ class SetObjectsToggler(Operator):
         scene=context.scene
         _set=eval(self.var1)
         total_list=[_set.empty_root,_set.ctc_header]
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.hide_view_set(unselected=True)
+        if not self.ev.shift:
+            bpy.ops.object.select_all(action='DESELECT')
+            bpy.ops.object.hide_view_set(unselected=True)
 
         total_list.extend([a.obje for a in _set.eobjs])
         for ob in [a for a in total_list if a!=None]:
@@ -540,6 +551,7 @@ class SetObjectsToggler(Operator):
                     
         return {'FINISHED'}
     def invoke(self, context, event):
+        self.ev=event
         return self.execute(context)
 
 def set_choose_dynamic(self,context):
@@ -614,6 +626,7 @@ class updateUsersOfCTC(Operator):
         #row.prop_search(self,'tar_ob',context.scene,'objects',text='Target')
         row=self.layout
         row.prop(self,'bones_too',text='Copy bone matrices too?',icon='GROUP_BONE')
+        
 cls=[SimpleConfirmOperator,CopyObjectChangeVG ,
 SolveRepeatedUVs,safeRemoveDoubles,
 MHW_ImportManager,emptyVGrenamer,
