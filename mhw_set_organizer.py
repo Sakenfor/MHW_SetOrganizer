@@ -1050,6 +1050,17 @@ class dpMHW_panel(bpy.types.Panel):
                 row2=sbox.row(align=1)
                 row2.prop(_set,'use_custom_path',text='Use Custom Export Path',icon='COPY_ID')
 
+                row2=sbox.row()
+                row2.prop(_set,'copy_obj_src',text='CopySrc')
+                row2.operator('dpmhw.copy_object',text='Copy/Replace Object',icon='COPYDOWN')
+                row2=sbox.row()
+                ctfix=row2.operator('scene.dpmhw_button',text='Fix CTC IDs',icon='HELP')
+                ctfix.func,ctfix.var1='fix_ctc_ids','scene.%s'%_set.path_from_id()
+                
+                row2.operator('dpmhw.empty_vg_renamer',text='Rename Empties and VG')
+                row2=sbox.row()
+                opup=row2.operator('dpmhw.update_ctc_users',text="Update all users of this set's CTC")
+                opup.var1='scene.%s'%_set.path_from_id()
                 
                 row2=sbox.row(align=1)
                 row2.prop(_set,'show_ctc_manager',text="Copied CTC's Viewer (WIP)",icon='BOIDS')
@@ -1150,17 +1161,7 @@ class dpMHW_panel(bpy.types.Panel):
                                                 
                                             if props_icons.get(prop):row.label(icon=props_icons[prop] )
                                             pp=row.prop(_o,'["%s"]'%prop)
-                row2=sbox.row()
-                row2.prop(_set,'copy_obj_src',text='CopySrc')
-                row2.operator('dpmhw.copy_object',text='Copy/Replace Object',icon='COPYDOWN')
-                row2=sbox.row()
-                ctfix=row2.operator('scene.dpmhw_button',text='Fix CTC IDs',icon='HELP')
-                ctfix.func,ctfix.var1='fix_ctc_ids','scene.%s'%_set.path_from_id()
-                
-                row2.operator('dpmhw.empty_vg_renamer',text='Rename Empties and VG')
-                row2=sbox.row()
-                opup=row2.operator('dpmhw.update_ctc_users',text="Update all users of this set's CTC")
-                opup.var1='scene.%s'%_set.path_from_id()
+
             row=sbox.row()
             row.label(text='Choose/Add Active Set:',icon='COLLAPSEMENU')
             row=sbox.row()
