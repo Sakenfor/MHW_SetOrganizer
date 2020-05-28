@@ -754,11 +754,11 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
             cons.inverse_matrix = o2.parent.matrix_world.inverted()
 
         scene.update()
+    modif_state_save,ob_state_save={},{}
     if _set.ctc_copy_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
             if tag['Target']==[] or tag['Source']==[]:continue
-            modif_state_save,ob_state_save={},{}
             
             for s in tag['Target']+tag['Source']:
                 ob_state_save[s]=[s.hide,s.hide_select]
