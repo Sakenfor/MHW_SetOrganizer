@@ -146,11 +146,13 @@ def weight_clean(self,context,object,do_normalize=0,do_limit=0,do_clean=0):
     remove_unused_vg(object)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
+    if do_clean:
+        bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
     if object.data.get('blockLabel')!=None and do_limit:
         ldata=object.data['blockLabel']
         limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
         try:
-            bpy.ops.object.vertex_group_limit_total(limit=limit-1)
+            bpy.ops.object.vertex_group_limit_total(limit=limit)
             if limit==4: #Not fully sure if this can cause issues
                 object.data['unkn']=19
                 object.data['unkn2']=33
@@ -162,8 +164,7 @@ def weight_clean(self,context,object,do_normalize=0,do_limit=0,do_clean=0):
         except:
             self.report({'WARNING'},'Could not limit the weights of %s'%object.name)
             pass
-    if do_clean:
-        bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
+
         
     if do_normalize:
         bpy.ops.object.vertex_group_normalize_all(lock_active=False)

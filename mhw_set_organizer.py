@@ -754,7 +754,7 @@ def CopyCTC(self,context,copy_from): #AKA, The Most Messy Code You Have Ever See
             cons.inverse_matrix = o2.parent.matrix_world.inverted()
 
         scene.update()
-    modif_state_save,ob_state_save={},{}
+    modif_state_save,ob_state_save={},{} #TODO, choose to use modifiers or not
     if _set.ctc_copy_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
@@ -1061,7 +1061,9 @@ class dpMHW_panel(bpy.types.Panel):
                 row2=sbox.row()
                 opup=row2.operator('dpmhw.update_ctc_users',text="Update all users of this set's CTC")
                 opup.var1='scene.%s'%_set.path_from_id()
-                
+                row2=sbox.row()
+                row2.operator('dpmhw.target_armature',icon='OUTLINER_OB_ARMATURE')
+                row2.operator('dpmhw.target_weights',icon='MESH_PLANE')
                 row2=sbox.row(align=1)
                 row2.prop(_set,'show_ctc_manager',text="Copied CTC's Viewer (WIP)",icon='BOIDS')
                 if _set.show_ctc_manager:

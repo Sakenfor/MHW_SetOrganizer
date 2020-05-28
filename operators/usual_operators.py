@@ -422,7 +422,79 @@ class SolveRepeatedUVs(Operator):
     def draw(self, context):
         pass
 
+def getArmature():
+    arma = [o for o in bpy.context.scene.objects if o.type == "ARMATURE"]
+    if len(arma) != 1:
+        raise ValueError("Can't find canonical armature for the transfer to work on. There are %d/1 targets."%len(arma))
+    return arma[0]
+#Copied from MOD3 Importer/Exporter and slightly modified to use _set objects and empties
 
+class SaketargetArmature(Operator):
+    bl_idname = 'dpmhw.target_armature'
+    bl_label = "Rename Groups to Armature Names"
+    bl_description = "Renames every vertex group to it's Armature Target Name based on Current Bone Function ID."
+    bl_options = {"REGISTER", "PRESET", "UNDO"}    
+
+    def execute(self,context):
+        fromEmpty = {}
+        remapTable = {}
+        scene=context.scene
+        mhw=scene.mhwsake
+        if len(mhw.export_set)==0:return {"FINISHED"}
+        _set=mhw.export_set[mhw.oindex]
+        if _set.empty_root==None:return{"FINISHED"}
+        empties=all_heir(_set.empty_root)
+        for ebone in [o for o in empties if o.get('boneFunction')!=None]:
+            fromEmpty[ebone["boneFunction"]] = ebone
+        armature = getArmature()
+        for bone in armature.pose.bones:
+            if "boneFunction" in bone and bone["boneFunction"] in fromEmpty:
+                remapTable[fromEmpty[bone["boneFunction"]].name] = bone.name
+
+        for mesh in [o.obje for o in _set.eobjs if o.obje !=None]:
+
+            for group in mesh.vertex_groups:
+                if group.name in remapTable:
+                    group.name = remapTable[group.name]
+            modifiers = mesh.modifiers
+            if "Auxiliary Armature" not in modifiers:
+                mod = modifiers.new("Auxiliary Armature","ARMATURE")
+                mod.object = armature
+            else:
+                modifiers["Auxiliary Armature"].object = armature
+        return {'FINISHED'}
+#Copied from MOD3 Importer/Exporter and slightly modified to use _set objects and empties
+class SaketargetEmpties(Operator):
+    bl_idname = 'dpmhw.target_weights'
+    bl_label = "Rename Groups to Empty Names"
+    bl_description = "Renames every vertex group to it's Empty Target Name based on Current Bone Function ID."
+    bl_options = {"REGISTER", "PRESET", "UNDO"}    
+
+    def execute(self,context):
+        scene=context.scene
+        mhw=scene.mhwsake
+        if len(mhw.export_set)==0:return {"FINISHED"}
+        _set=mhw.export_set[mhw.oindex]
+        if _set.empty_root==None:return{"FINISHED"}
+        empties=all_heir(_set.empty_root)
+        
+        fromArmature = {}
+        remapTable = {}
+        armature = getArmature()
+        
+        for bone in armature.pose.bones:
+            if "boneFunction" in bone:
+                fromArmature[bone["boneFunction"]]=bone
+        for ebone in [o for o in empties if o.get('boneFunction')!=None]:
+            if ebone["boneFunction"] in fromArmature:
+                remapTable[fromArmature[ebone["boneFunction"]].name] = ebone.name
+        for mesh in [o.obje for o in _set.eobjs if o.obje !=None]:
+            for group in mesh.vertex_groups:
+                if group.name in remapTable:
+                    group.name = remapTable[group.name]
+
+        return {'FINISHED'}
+       
 class emptyVGrenamer(Operator): 
     """Rename Empties and VG adding .R .L"""
     bl_idname = "dpmhw.empty_vg_renamer"
@@ -638,6 +710,7 @@ cls=[SimpleConfirmOperator,CopyObjectChangeVG ,
 SolveRepeatedUVs,safeRemoveDoubles,
 MHW_ImportManager,emptyVGrenamer,
 updateUsersOfCTC,SetObjectsToggler,
+SaketargetArmature,SaketargetEmpties,
 ]
 def register():
     for cl in cls:
