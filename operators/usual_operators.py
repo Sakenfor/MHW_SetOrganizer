@@ -33,7 +33,8 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
     found_root=None
-    
+    changed_ids,b_ids={},{}
+    new_bonedict={}
     if mhw.ctc_copy_use_active:
         target=scene.active_object if _set.empty_root==None else _set.empty_root
     else:
@@ -140,20 +141,22 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
         order=total_list[:]
         total_list=sorted(list(set(total_list)),key=lambda x:order.index(x))
         #remove doubles,preserve sort order, crucial else parenting is messed, is a current flaw ^
-        b_ids,changed_ids={},{}
         if max_id2>fmax:fmax=max_id2+1
         elif max_id2==fmax:fmax=fmax+1
-        for xx in _set.ctc_copy_src:
-            if xx.target!=target:continue
-            for a in xx.copy_src_track:
-                if a.ttype!='Bone' or a.bone_id==0:continue
-                b_ids[a.bone_id]=a
-                if a.changed_id!=0:changed_ids[a.bone_id]=a
-                if a.ttype=='CTC':
-                    header_tar=a.caster
-                    if header_tar.name not in scene.objects:scene.objects.link(header_tar)
-        pairs,frame_props,to_parent={},{},{}
-        li=bpy.data.libraries.data.objects
+    for xx in _set.ctc_copy_src:
+        if xx.target!=target:continue
+        for a in xx.copy_src_track:
+            if a.ttype=='CTC':
+                header_tar=a.caster
+                if header_tar.name not in scene.objects:scene.objects.link(header_tar)
+            if a.ttype!='Bone' or a.bone_id==0:continue
+            b_ids[a.bone_id]=a
+            if a.changed_id!=0:changed_ids[a.bone_id]=a
+            if a.caster!=None and a.o2!=None:new_bonedict[a.caster.name]=a.o2
+
+    pairs,frame_props,to_parent={},{},{}
+    li=bpy.data.libraries.data.objects
+    if ctc_organizer.copy_ctc_bool:
         for isr,o in enumerate(total_list):
             if o==None:continue
             om=o.matrix_world.copy()
@@ -261,16 +264,18 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
     sorted_tracks=sort_the_tracks(ctc_col)
     tr_all_wgt=1
 
-    new_bonedict={}
-    # if tr_all_wgt:
-        # for sr in src_arma_re:
-            # if sr==None:continue
-            # if changed_ids.get(sr) and changed_ids[sr].caster==src_arma_re[sr]:
-                # tname=changed_ids[sr].o2
+    
+    if tr_all_wgt:
+        for sr in src_arma_re:
+            if sr==None:continue
+            if changed_ids.get(sr) and changed_ids[sr].caster==src_arma_re[sr]:
+                tname=changed_ids[sr].o2
             # elif arma_re.get(sr) and changed_ids.get(sr)==None:
                 # tname=arma_re[sr]
-            # else:continue
-            # new_bonedict[src_arma_re[sr].name]=tname
+                
+            else:continue
+            if new_bonedict.get(src_arma_re[sr].name)==None:new_bonedict[src_arma_re[sr].name]=tname
+            
                 
     if ctc_organizer.copy_ctc_bool:
         for i in sorted_tracks:
@@ -341,7 +346,6 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 for w in oco.vertex_groups:
                     
                     if new_bonedict.get(w.name):
-                        print(w.name,new_bonedict[w.name].name)
                         w.name=new_bonedict[w.name].name
                     else:
                         oco.vertex_groups.remove(w)
