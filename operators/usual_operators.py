@@ -333,10 +333,13 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 scene.update()
                 for w in oco.vertex_groups:
                     if new_bonedict.get(w.name):w.name=new_bonedict[w.name].name
-                    if ctc_organizer.wgt_trsf_limit=='All Groups':continue
+                    else:
+                        oco.vertex_groups.remove(w)
+                        continue
+                    if ctc_organizer.wgt_limit=='All Groups':continue
                     bo=bpy.data.objects[w.name]
-                    bool1=new_bonedict[w.name]['boneFunction']>=150 and ctc_organizer.wgt_trsf_limit=='Below 150 ID'
-                    bool2=new_bonedict[w.name]['boneFunction']<150 and ctc_organizer.wgt_trsf_limit=='Above 150 ID'
+                    bool1=bo['boneFunction']>=150 and ctc_organizer.wgt_limit=='Below 150 ID'
+                    bool2=bo['boneFunction']<150 and ctc_organizer.wgt_limit=='Above 150 ID'
                     if bool1 or bool2:oco.vertex_groups.remove(w)
                         
                 for t in tag['Target']:
