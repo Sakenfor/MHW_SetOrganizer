@@ -9,6 +9,9 @@ import random
 from re import findall
 chrs = 'abvgddjezzijklmnjoprstcufhccdzsh0123456789'
 
+
+    
+
 class ctcO():
     def __init__(self,**args):
         self.parent=None
@@ -263,9 +266,14 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
         for sr in src_arma_re:
             if sr==None:continue
             if arma_re.get(sr):
-                new_bonedict[src_arma_re[sr].name]=arma_re[sr]
+
+                if changed_ids.get(sr) and changed_ids[sr].caster==src_arma_re[sr]:
+                    tname=changed_ids[sr].o2
+                    #reeport(self,found='Found a changed ID bone %s'%tname)
+                else:
+                    tname=arma_re[sr]
+                new_bonedict[src_arma_re[sr].name]=tname
     if ctc_organizer.copy_ctc_bool:
-        print(len(sorted_tracks),'wtf')
         for i in sorted_tracks:
             #if o==None or o2==None:continue
             o,o2=i.caster,i.o2
@@ -287,9 +295,9 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             
             if i.ttype=='Bone':
                 #if o.parent==None:
-                new_bonedict[o.name]=o2
+                if new_bonedict.get(o.name)==None:new_bonedict[o.name]=o2
                 o2.matrix_local=o.matrix_local.copy()
-                IDD=i.bone_id if i.changed_id==0 else i.changed_id
+                IDD=i.bone_id #if i.changed_id==0 else i.changed_id
                 o2['boneFunction']=IDD
                 scene.update()
             elif i.ttype=='CTC_*_Frame':
@@ -332,10 +340,14 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 scene.objects.link(oco)
                 scene.update()
                 for w in oco.vertex_groups:
-                    if new_bonedict.get(w.name):w.name=new_bonedict[w.name].name
+                    
+                    if new_bonedict.get(w.name):
+                        print(w.name,new_bonedict[w.name].name)
+                        w.name=new_bonedict[w.name].name
                     else:
                         oco.vertex_groups.remove(w)
                         continue
+
                     if ctc_organizer.wgt_limit=='All Groups':continue
                     bo=bpy.data.objects[w.name]
                     bool1=bo['boneFunction']>=150 and ctc_organizer.wgt_limit=='Below 150 ID'
