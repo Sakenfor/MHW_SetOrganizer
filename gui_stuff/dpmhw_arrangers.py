@@ -169,13 +169,21 @@ class dpMHW_drawObjSet(bpy.types.UIList):
         
         layout.prop(item, "export", text="", emboss=0, icon=['RADIOBUT_OFF','RADIOBUT_ON'][item.export],expand=0)
 
-        if _set.more_obj_options:
+        if _set.obj_views=='Other':
             row=layout.row(align=1)
             # row.prop(item,'tag',text='Tag')
             row.prop(item,'preserve_quad',text='',icon='SURFACE_NSURFACE')
         if item.obje!=None:
-            layout.operator('dpmhw.uvsolves',text='',icon='GROUP_UVS').tar_ob=item.obje.name
-            layout.operator('dpmhw.safedoubleremove',text='',icon='VERTEXSEL').tar_ob=item.obje.name
+            if _set.obj_views=='None':
+                layout.operator('dpmhw.uvsolves',text='',icon='GROUP_UVS').tar_ob=item.obje.name
+                layout.operator('dpmhw.safedoubleremove',text='',icon='VERTEXSEL').tar_ob=item.obje.name
+            elif _set.obj_views=='Other':
+                hooks=[m for m in item.obje.modifiers if m.type=='HOOK' and m.object!=None]
+                if hooks:layout.prop(item,'apply_hooks',text='',icon='HOOK')
+            elif _set.obj_views=='Shape Key' and item.obje.data.shape_keys!=None:
+                #row=layout.row()
+                layout.prop_search(item,'key_choice',item.obje.data.shape_keys,'key_blocks',text='')
+                layout.prop(item,'apply_sk',text='Apply Key',icon=['SPACE3','SPACE2'][item.apply_sk])
     def invoke(self, context, event):        
         pass 
 

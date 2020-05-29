@@ -1,4 +1,4 @@
-import bpy,glob,os
+import bpy,glob,os,bmesh
 from re import findall
 
 def ObjProp(var,obj,val,descr,max=10.0,min=0.0):
@@ -14,6 +14,19 @@ def ObjProp(var,obj,val,descr,max=10.0,min=0.0):
           "soft_max":10.0,
           "is_overridable_library":0,
           }
+
+def o_tri(self,scene,object):
+            mesh_tri=object.data.copy()
+            bm = bmesh.new()
+            bm.from_mesh(mesh_tri)
+            bmesh.ops.triangulate(bm, faces=bm.faces)
+            bm.to_mesh(mesh_tri)
+            bm.free()
+            object.data=mesh_tri
+
+            mesh_tri.update(calc_tessface=False)
+            return mesh_tri
+
 #Alternative to print, good when blender wants to spam constraint loop errors.
 def reeport(self,**args):
     rep=[]
