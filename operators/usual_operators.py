@@ -372,8 +372,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 bpy.data.meshes.remove(mcopy)
 
         for t in tag['Target']:
-            weight_clean(self,context,t,do_normalize=_set.normalize_active,
-            do_limit=_set.normalize_active,do_clean=_set.clean_after_ctc_copy)
+            weight_clean(self,context,ctc_organizer,t)
 
         for m in modif_state_save:m.show_viewport=modif_state_save[m]
         for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
@@ -1174,12 +1173,27 @@ class CopyCTCops(Operator):
         row.label("Weights, CTC-Chains Copy, or Both:")
         row=layout.row()
         row.prop(_org,'transfer_weights',icon='MOD_VERTEX_WEIGHT',text='Transfer Weights')
+        row.prop(_org,'copy_ctc_bool',icon='ROTATECENTER',text='Copy CTC')
         help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="")
         help1.var1,help1.func='ctc_after_copy','show_info'
-        row.prop(_org,'copy_ctc_bool',icon='ROTATECENTER',text='Copy CTC')
+        row=layout.row()
+        row.label('After Transfer Weights, Do:')
+        row=layout.row()
+        bo1=row.box()
+        row=bo1.row()
+        row.prop(_org,'limit_after',text='Limit 4/8',icon='LINENUMBERS_ON')
+        row.prop(_org,'clean_after',text='Clean',icon='SNAP_NORMAL')
+        row.prop(_org,'normalize_after',text='Normalize All',icon='MOD_NORMALEDIT')
+        row=bo1.row(align=1)
+        row.prop(_org,'smooth_after',text='Smooth Weights',icon='MOD_SMOOTH')
+        row.prop(_org,'smooth_strength',text='Strength')
+        row.prop(_org,'smooth_count',text='Repeat')
+
+        
         row=layout.row()
         row.prop(_org,'wgt_limit')
         row=layout.row()
+        
         
         ebox=row.box()
         row=ebox.row()

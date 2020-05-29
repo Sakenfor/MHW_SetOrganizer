@@ -135,8 +135,12 @@ def reload_external_ctc(self,context):
                         ext.blend=blend
                    #bpy.context.scene.objects.link(obj) # Blender 2.7x
 
-def weight_clean(self,context,object,do_normalize=0,do_limit=0,do_clean=0):
-    if all(x==0 for x in [do_normalize,do_limit,do_clean]):return
+def weight_clean(self,context,orga,object):
+    do_normalize=orga.normalize_after
+    do_limit=orga.limit_after
+    do_clean=orga.limit_after
+    do_smooth=orga.smooth_after
+    if all(x==0 for x in [do_normalize,do_limit,do_clean,do_smooth]):return
     scene=context.scene
     bpy.ops.object.select_all(action='DESELECT')
     object.select=1
@@ -146,8 +150,8 @@ def weight_clean(self,context,object,do_normalize=0,do_limit=0,do_clean=0):
     remove_unused_vg(object)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    if do_clean:
-        bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
+    limit=None
+
     if object.data.get('blockLabel')!=None and do_limit:
         ldata=object.data['blockLabel']
         limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
@@ -164,8 +168,13 @@ def weight_clean(self,context,object,do_normalize=0,do_limit=0,do_clean=0):
         except:
             self.report({'WARNING'},'Could not limit the weights of %s'%object.name)
             pass
+    if do_smooth:
+        bpy.ops.object.vertex_group_smooth(group_select_mode='ALL', factor=orga.smooth_strength, repeat=orga.smooth_count)
+        if limit!=None:
+            bpy.ops.object.vertex_group_limit_total(limit=limit)
+    if do_clean:
+        bpy.ops.object.vertex_group_clean(group_select_mode='ALL')
 
-        
     if do_normalize:
         bpy.ops.object.vertex_group_normalize_all(lock_active=False)
 

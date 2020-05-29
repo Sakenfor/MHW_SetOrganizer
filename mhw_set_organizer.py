@@ -81,12 +81,21 @@ wgt_trsf_limit=[['All Groups','','BRUSH_DARKEN'],['Below 150 ID','','BRUSH_ADD']
 class ctc_copy_col_entries(PropertyGroup):
     chain=PointerProperty(type=bpy.types.Object)
     toggle=BoolProperty(default=1)
+
 class ctc_copy_organizer(PropertyGroup):
     entries=CollectionProperty(type=ctc_copy_col_entries)
     source=PointerProperty(type=bpy.types.Object)
     transfer_weights=BoolProperty(default=1)
     copy_ctc_bool=BoolProperty(default=1)
-    wgt_limit=EnumProperty(name='Weight Limit',items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(wgt_trsf_limit)])
+    wgt_limit=EnumProperty(name='Transfer Range',items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(wgt_trsf_limit)])
+    
+    smooth_after=BoolProperty(default=0)
+    smooth_strength=FloatProperty(default=0.5)
+    smooth_count=IntProperty(default=1,min=1,max=11)
+    normalize_after=BoolProperty(default=1)
+    clean_after=BoolProperty(default=1)
+    limit_after=BoolProperty(default=1,description='Limit the total groups per vertex, based on Mesh Block Label')
+    
 class mhwExpSet(PropertyGroup):
 
     name=StringProperty()
@@ -106,10 +115,7 @@ class mhwExpSet(PropertyGroup):
     
     ctc_header=PointerProperty(type=bpy.types.Object,poll=header_copy_poll)
     ctc_copy_src=CollectionProperty(type=ctc_copy_sources)
-    clean_after_ctc_copy=BoolProperty(default=1,name='+Clean Groups')
-    normalize_active=BoolProperty(default=1,name='+Normalize Groups')
-    ctc_copy_weights=BoolProperty(default=1,name='Copy Weights After CTC Copying/Updating (Use Tags)',description='Copy the weights of bones above function 150, changing the names accordingly.')
-    
+
     show_ctc_manager=BoolProperty()
     export_path=StringProperty()
     import_path=StringProperty()
@@ -209,6 +215,7 @@ class mhwExpSet(PropertyGroup):
                      ("Null","Null","Sets the constraint target to null",2)],
             default = "Null"
             )    
+
 class mhwSetOfSetsObj(PropertyGroup):
     name=StringProperty()
     export=BoolProperty(default=1)
@@ -530,15 +537,6 @@ class dpMHW_panel(bpy.types.Panel):
                 ctcopy.copy_from='External'
                 row=sbox.row(align=1)
 
-                #row.prop(_set,'ctc_copy_weights',icon='MOD_VERTEX_WEIGHT')
-
-                #if _set.ctc_copy_weights:
-                # row=sbox.row()
-                # row.label('Save before CTC Copy, if toggling on these below!!!')
-                row=sbox.row(align=1)
-                row.prop(_set,'clean_after_ctc_copy',icon='SNAP_VERTEX')
-                row.prop(_set,'normalize_active',icon='SNAP_NORMAL')
-                    
             row=sbox.row(align=1)
             row.prop(mhw,'header_copy_name',text='Prepend obj text')
             row.prop(mhw,'header_new_names',text='New Name')
