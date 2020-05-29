@@ -162,7 +162,6 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             
             if o.get('Type') and regular_ctc_names.get(o['Type']):tty=regular_ctc_names[o['Type']]
             else:tty='Bone'
-            #reeport(self,o=o.name,typee=tty)
             if header_tar!=None and header_tar!=o and tty=='Header':
                 _o2=ctcO(tty=tty,o=o,o2=header_tar)
                 ctctrack[o]=_o2
@@ -263,17 +262,16 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
     tr_all_wgt=1
 
     new_bonedict={}
-    if tr_all_wgt:
-        for sr in src_arma_re:
-            if sr==None:continue
-            if arma_re.get(sr):
-
-                if changed_ids.get(sr) and changed_ids[sr].caster==src_arma_re[sr]:
-                    tname=changed_ids[sr].o2
-                    #reeport(self,found='Found a changed ID bone %s'%tname)
-                else:
-                    tname=arma_re[sr]
-                new_bonedict[src_arma_re[sr].name]=tname
+    # if tr_all_wgt:
+        # for sr in src_arma_re:
+            # if sr==None:continue
+            # if changed_ids.get(sr) and changed_ids[sr].caster==src_arma_re[sr]:
+                # tname=changed_ids[sr].o2
+            # elif arma_re.get(sr) and changed_ids.get(sr)==None:
+                # tname=arma_re[sr]
+            # else:continue
+            # new_bonedict[src_arma_re[sr].name]=tname
+                
     if ctc_organizer.copy_ctc_bool:
         for i in sorted_tracks:
             #if o==None or o2==None:continue
@@ -296,7 +294,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             
             if i.ttype=='Bone':
                 #if o.parent==None:
-                if new_bonedict.get(o.name)==None:new_bonedict[o.name]=o2
+                new_bonedict[o.name]=o2
                 o2.matrix_local=o.matrix_local.copy()
                 IDD=i.bone_id #if i.changed_id==0 else i.changed_id
                 o2['boneFunction']=IDD
