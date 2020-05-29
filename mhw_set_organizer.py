@@ -783,7 +783,7 @@ class dpMHW_panel(bpy.types.Panel):
                                             
                                             row.label(str(round(_o[prop],2)),icon=props_icons[prop]) if props_icons.get(prop) else row.label(_o[prop])
                                     if x.ttype=='Bone' and not i.info_when_closed:
-                                        idtext=' %s'%('%s (%s)'%(x.changed_id,x.bone_id) if x.changed_id!=0 else x.bone_id)
+                                        idtext=' %s'%('%s (%s)'%(x.bone_id,x.changed_id) if x.changed_id!=0 else x.bone_id)
                                         row.label(idtext)
                                     if len(x.VG)>0:
                                         row.label(str(len(x.VG)),icon='GROUP_VERTEX')

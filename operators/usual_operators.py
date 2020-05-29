@@ -237,19 +237,20 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 
                 if tty=='Bone':
                     #reeport(self,bo=o2.name,id=o_id)
-                    o2track.bone_id=o_id
+                    #if 
                     #pid=source_bone_hie[o_id]
+                    if o2track.bone_id==0:o2track.bone_id=o_id
                     if o_id >= 150 and arma_re.get(o_id)!=None: #and o2track.is_new==1:
                        
                         if o2track.changed_id==0:
-                            o_id=fmax
-                            o2track.changed_id=fmax
-                            self.report({'INFO'},'Shifted boneFunction %s to %s (%s)'%(o['boneFunction'],o_id,o2.name))
+                            #o_id=fmax
+                            o2track.changed_id=o_id
+                            self.report({'INFO'},'Shifted boneFunction %s to %s (%s)'%(o['boneFunction'],fmax,o2.name))
+                            o2track.bone_id=fmax
                             fmax+=1
-                            
-                        else:
-                            o_id=o2track.changed_id
-            else:o2track.bone_id=o_id if o_id!=None else 0
+
+                    
+            elif o2track.changed_id==0 and o_id!=None:o2track.bone_id=o_id
             # if changed_ids.get(pid):o2track.caster=changed_ids[pid]
                     # b_ids[o_id]=o2track
             if tty=='Header':headerr=o2
