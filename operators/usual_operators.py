@@ -1206,7 +1206,9 @@ class CopyCTCops(Operator):
         for i in _org.entries:
             row=ebox.row()
             row.prop(i,'toggle',text=i.chain.name,icon=['PMARKER','PMARKER_SEL'][i.toggle])
-        
+
+
+
 cls=[SimpleConfirmOperator,CopyObjectChangeVG ,
 SolveRepeatedUVs,safeRemoveDoubles,
 MHW_ImportManager,emptyVGrenamer,
