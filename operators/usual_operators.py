@@ -343,7 +343,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 for w in oco.vertex_groups:
                     if new_bonedict.get(w.name):
                         w.name=new_bonedict[w.name].name
-                        if orga.remove_vg_before_transfer:
+                        if ctc_organizer.remove_vg_before_transfer:
                             for o in valid_obs:
                                 #reeport(self,v1=o.obje.vertex_groups.get(w.name),v2=bpy.data.objects[w.name]['boneFunction']>=150,ob=o.obje.name)
                                 if o.obje.vertex_groups.get(w.name) and bpy.data.objects[w.name]['boneFunction']>=150:
@@ -375,7 +375,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 
                 bpy.data.objects.remove(oco)
                 bpy.data.meshes.remove(mcopy)
-        if orga.remove_vg_not_found:
+        if ctc_organizer.remove_vg_not_found:
             if bpy.data.objects.get(rigname)!=None:
                 aux_bones=[a.name for a in bpy.data.objects[rigname].pose.bones]
             else:aux_bones=[]
