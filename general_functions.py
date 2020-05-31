@@ -245,6 +245,12 @@ def fix_ctc_ids(self,context,col):
                     self.report({'WARNING'},'Could not find bone function in %s'%kons.target.name)
     scene.update()
 
+def update_sides(self,context,col):
+    for i in [a for a in col.copy_src_track if a.ttype=='Bone']:
+        loc=i.o2.matrix_world.to_translation()
+        i.sideX='R' if loc[0]<0 else 'L' if loc[0]>0 else '0'
+        i.sideY='D' if loc[1]<0 else 'U' if loc[1]>0 else '0'
+        i.sideZ='B' if loc[2]<0 else 'F' if loc[2]>0 else '0'
 
 def find_mirror(o,b_locs):
     if b_locs.get(o)==None or b_locs[o][0][0]==0:return False

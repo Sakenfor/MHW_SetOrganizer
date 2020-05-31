@@ -37,10 +37,10 @@ class mhwExpSetObj(PropertyGroup):
     to_copy=BoolProperty()
     tag=StringProperty(description='Can have more than one, separate with ","')
     preserve_quad=BoolProperty(description='Make a copy of mesh on export and triangulate it, preserving original mesh')
-    material_name=StringProperty()
+    material_name=StringProperty(description="Apply this string to mesh(object) material property on export")
     accept_weight_transfer=BoolProperty(default=True,description="To transfer weights, object has to have a tag, but with this toggled off, weight won't be transferred")
+    accept_weight_smoothing=BoolProperty(default=True,description="Lock this object from weight smoothing of 'CTC Copy' function")
     apply_hooks=BoolProperty(default=1,description="Apply hook modifiers on export (object will be kept same)")
-    
     key_choice=StringProperty()#PointerProperty(type=bpy.types.ShapeKey)
     apply_sk=BoolProperty(default=1) # TODO, not sure how MOD3 Exporter handles shape keys yet.
 
@@ -51,6 +51,11 @@ class ob_copy_track(PropertyGroup):
     ctc_src=PointerProperty(type=bpy.types.Object)
     armature=PointerProperty(type=bpy.types.Object)
     o2=PointerProperty(type=bpy.types.Object)
+    pair=PointerProperty(type=bpy.types.Object)
+    sideX=StringProperty()
+    sideY=StringProperty()
+    sideZ=StringProperty()
+    
     edit_view=BoolProperty(default=0)
     ttype=StringProperty()
     is_new=BoolProperty()
@@ -58,8 +63,10 @@ class ob_copy_track(PropertyGroup):
     changed_id=IntProperty()
     VG=CollectionProperty(type=ob_copy_VG)
     id_name=StringProperty()
+    
     #cons=PointerProperty(type=bpy.types.Constraint)
-
+lr_LR_list=[['L>R','...','TRIA_RIGHT'],
+['R>L','...','TRIA_LEFT']]
 class ctc_copy_sources(PropertyGroup):
     name=StringProperty()
     source=PointerProperty(type=bpy.types.Object)
@@ -79,7 +86,10 @@ class ctc_copy_sources(PropertyGroup):
     filter_frame=BoolProperty(default=1)
     filter_bone=BoolProperty(default=1)
     info_when_closed=BoolProperty(description='Show some properties even if tab of object is closed')
-
+    
+    lr_LR=EnumProperty(items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(lr_LR_list)])
+    lr_insert_kf=BoolProperty(name='Insert Keyframe',default=0,description='Insert key frame of T/R/S of all pairs it finds, on current frame')
+    
 wgt_trsf_limit=[['All Groups','','BRUSH_DARKEN'],['Below 150 ID','','BRUSH_ADD'],['Above 150 ID','','BRUSH_VERTEXDRAW']]
 
 class ctc_copy_col_entries(PropertyGroup):
@@ -391,26 +401,27 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
                 scene.objects.active=dummy
                 dummy.select=1
                 #Shape Keys
-                if not skvalid:
-                    bpy.ops.object.shape_key_remove(all=True)
-                else:
-                    sk=dummy.data.shape_keys.key_blocks
-                    the_key=None
-                    if _set.sk_how=='Active Keys':
-                        bpy.ops.object.shape_key_add(from_mix=True)
-                        the_key=sk[dummy.active_shape_key_index]
-                    elif _set.sk_how=='Global Key Name':
-                        the_key=sk.get(_set.sk_choice)
-                    elif _set.sk_how=='Specific Keys' and o.key_choice!='':
-                        the_key=sk.get(o.key_choice)
-                    if the_key!=None:
-                        dummy.active_shape_key_index=0
-                        bpy.ops.object.mode_set(mode='EDIT')
-                        bpy.ops.mesh.select_all(action='SELECT')
-                        bpy.ops.mesh.blend_from_shape(shape=the_key.name)
-                        bpy.ops.object.mode_set(mode='OBJECT')
-                        dummy.data.update()
+                if dummy.data.shape_keys!=None:
+                    if not skvalid:
                         bpy.ops.object.shape_key_remove(all=True)
+                    else:
+                        sk=dummy.data.shape_keys.key_blocks
+                        the_key=None
+                        if _set.sk_how=='Active Keys':
+                            bpy.ops.object.shape_key_add(from_mix=True)
+                            the_key=sk[dummy.active_shape_key_index]
+                        elif _set.sk_how=='Global Key Name':
+                            the_key=sk.get(_set.sk_choice)
+                        elif _set.sk_how=='Specific Keys' and o.key_choice!='':
+                            the_key=sk.get(o.key_choice)
+                        if the_key!=None:
+                            dummy.active_shape_key_index=0
+                            bpy.ops.object.mode_set(mode='EDIT')
+                            bpy.ops.mesh.select_all(action='SELECT')
+                            bpy.ops.mesh.blend_from_shape(shape=the_key.name)
+                            bpy.ops.object.mode_set(mode='OBJECT')
+                            dummy.data.update()
+                            bpy.ops.object.shape_key_remove(all=True)
                     
                 #Hook:
                 hooks=[h for h in dummy.modifiers if  h.type=='HOOK' and h.object!=None]
@@ -805,15 +816,18 @@ class dpMHW_panel(bpy.types.Panel):
                             row.prop(i,'filter_bone',text='Bone',icon=types_icons['Bone'])
                             filter_per={'CTC':i.filter_header,'CTC_*_Frame':i.filter_frame,'CTC_Chain':i.filter_chain,'Bone':i.filter_bone}
                             row=bo2.row(align=1)
-                            row.prop_search(i,'edit_filter',i,'copy_src_track',text='Pick')
+                            row.prop_search(i,'edit_filter',i,'copy_src_track',text='Search')
+                            row.prop(i,'edit_filter',text='')
                             hall=row.operator('scene.dpmhw_button',text="Update Internal Names",icon='STYLUS_PRESSURE')
                             hall.func,hall.var1='ctc_edit_col_edit','{ctcnum}|{setnum}|Update'.format(ctcnum=_i,setnum=mhw.oindex)
                             help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="") 
                             help1.var1,help1.func='ctc_edit_update','show_info'
                             row=bo2.row(align=1)
                             row.prop(i,'info_when_closed',icon='WORDWRAP_ON',text='UnexpandedInfo')
+                            copyid='scene.'+i.path_from_id()
                             vupd=row.operator('scene.dpmhw_button',text='Copy Props from Sources',icon='OOPS')
-                            vupd.func,vupd.var1,vupd.confirmer='ctc_copy_over_props','scene.'+i.path_from_id(),1
+                            vupd.func,vupd.var1,vupd.confirmer='ctc_copy_over_props',copyid,1
+                            mir=row.operator('dpmhw.mirror_bones',text='Mirror Bones',icon='FULLSCREEN_ENTER').copyid=copyid
                             help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="") 
                             help1.var1,help1.func='ctc_copy_over_props','show_info'
                             if i.view_mode=='List View': #Not much useful for now, probably can find use in future
@@ -851,11 +865,12 @@ class dpMHW_panel(bpy.types.Panel):
                                     if x.ttype=='Bone' and not i.info_when_closed:
                                         idtext=' %s'%('%s (%s)'%(x.bone_id,x.changed_id) if x.changed_id!=0 else x.bone_id)
                                         row.label(idtext)
+                                        if x.pair!=None:row.label(text='Pair: %s'%x.pair.name,icon='MOD_MIRROR')
                                     if len(x.VG)>0:
                                         row.label(str(len(x.VG)),icon='GROUP_VERTEX')
                                         vupd=row.operator('scene.dpmhw_button',text='',icon='STICKY_UVS_VERT')
                                         vupd.func,vupd.var1='refresh_vertex','scene.'+x.path_from_id()
-
+                                        
                                     
                                     obse=row.operator('scene.dpmhw_button',text='',icon='HAND' if _o.select else 'DOT')
                                     obse.func,obse.var1='select_object',_o.name
@@ -1070,14 +1085,12 @@ class dpmhwButton(Operator):
         return {'FINISHED'}
         
 
-        
 def register():
     #if post_load in bpy.app.handlers.load_post: return
     global custom_icons
 
     bpy.utils.register_module(__name__)
     bpy.types.Scene.mhwsake = PointerProperty(type=dpMHW_help)
-    #bpy.types.Scene.mhwsetsz=PointerProperty(type=mhwExpSet)
     custom_icons = bpy.utils.previews.new()
     for i in glob.glob(base_dir+'/icons/*.png'):
         custom_icons.load(i.split('\\')[-1][:-4] , i, 'IMAGE')

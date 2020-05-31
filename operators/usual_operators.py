@@ -154,13 +154,13 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             if a.changed_id!=0:changed_ids[a.bone_id]=a
             if a.caster!=None and a.o2!=None:new_bonedict[a.caster.name]=a.o2
 
-    pairs,frame_props,to_parent={},{},{}
+    pairs,frame_props,to_parent,pairs2={},{},{},{}
     li=bpy.data.libraries.data.objects
     if ctc_organizer.copy_ctc_bool:
         for isr,o in enumerate(total_list):
             if o==None:continue
             om=o.matrix_world.copy()
-            
+            mirror=False
             
             
             if o.get('Type') and regular_ctc_names.get(o['Type']):tty=regular_ctc_names[o['Type']]
@@ -194,10 +194,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             o2track=ob_in_track(ctc_col,o,armature=target,report=self)
 
             if tty=='Bone':
-                mirror=find_mirror(o,b_locs)
-                if mirror:
-                    if pairs.get(mirror+o_id):obn=pairs[mirror+o_id]
-                    else:pairs[mirror+o_id]=obn
+
                 
                 
                 if changed_ids.get(o_id):
@@ -210,7 +207,12 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                     o2=arma_re[o_id]
                     if o2track==None:
                         o2track=ob_in_track(ctc_col,o,source,target,o2)
-            
+                mirror=find_mirror(o,b_locs)
+                if mirror:
+                    m_id=mirror+o_id
+                    if pairs.get(m_id):obn=pairs[m_id]
+                    else:pairs[m_id]=obn
+
             if o2track==None:
                 new=1
                 obx=obn#=obn.replace(ext,'')
@@ -250,8 +252,9 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                             self.report({'INFO'},'Shifted boneFunction %s to %s (%s)'%(o['boneFunction'],fmax,o2.name))
                             o2track.bone_id=fmax
                             fmax+=1
-
-                    
+            if tty=='Bone' and mirror:
+                if pairs2.get(m_id)==None:pairs2[m_id]=[]
+                pairs2[m_id].append(o2track)
             elif o2track.changed_id==0 and o_id!=None:o2track.bone_id=o_id
             # if changed_ids.get(pid):o2track.caster=changed_ids[pid]
                     # b_ids[o_id]=o2track
@@ -263,7 +266,11 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
 
     sorted_tracks=sort_the_tracks(ctc_col)
     tr_all_wgt=1
-
+    for mbo in [a for a in pairs2 if len(pairs2[a])==2]:
+        pp1,pp2=pairs2[mbo]
+        pp1.pair=pp2.o2
+        pp2.pair=pp1.o2
+        
     
     if tr_all_wgt:
         for sr in src_arma_re:
@@ -380,7 +387,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
 
         for m in modif_state_save:m.show_viewport=modif_state_save[m]
         for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
-    
+    update_sides(self,context,ctc_col)
 
 def rootfind(self,object):
     findroot=None
@@ -703,7 +710,7 @@ class MHW_ImportManager(Operator):
             row.prop(_set,'ccl_scale')
             row=layout.row()
             row.prop(_set,'ccl_missingFunctionBehaviour')
-
+useful_modifiers=['HOOK']
 class safeRemoveDoubles(Operator): 
     """Safely merge double vertices, hold Shift to choose last chosen options!"""
     bl_idname = "dpmhw.safedoubleremove"
@@ -723,6 +730,8 @@ class safeRemoveDoubles(Operator):
         if bpy.data.objects.get(self.tar_ob)!=None:
             scene=context.scene
             oob=bpy.data.objects[self.tar_ob]
+            mosave={m:m.show_viewport for m in oob.modifiers if m.type !='SUBSURF'}
+            for m in mosave:m.show_viewport=False
             selsave=context.selected_objects
             aktsave=context.active_object
             
@@ -762,6 +771,7 @@ class safeRemoveDoubles(Operator):
             context.scene.objects.active=aktsave
             bpy.data.objects.remove(o2)
             oob.hide,oob.hide_select=osave
+            for m in mosave:m.show_viewport=mosave[m]
             scene.update()
         return {'FINISHED'}
     def invoke(self, context, event):
@@ -796,10 +806,13 @@ class SolveRepeatedUVs(Operator):
             osave=[oob.hide,oob.hide_select]
             oob.hide=0
             oob.hide_select=0
+            mosave={m:m.show_viewport for m in oob.modifiers if m.type !='SUBSURF'}
+            for m in mosave:m.show_viewport=False
             bpy.ops.mod_tools.solve_uv_rep()
             for o in selsave:o.select=1
             context.scene.objects.active=aktsave
             oob.hide,oob.hide_select=osave
+            for m in mosave:m.show_viewport=mosave[m]
         return {'FINISHED'}
     def invoke(self, context, event):
         return self.execute(context)
@@ -1207,6 +1220,52 @@ class CopyCTCops(Operator):
             row=ebox.row()
             row.prop(i,'toggle',text=i.chain.name,icon=['PMARKER','PMARKER_SEL'][i.toggle])
 
+class BoneMirrorer(Operator): 
+    """Mirror objects from L>R or R>L"""
+    bl_idname = "dpmhw.mirror_bones"
+    bl_label = "Mirror Bones"
+    bl_options = {"REGISTER", "UNDO"} 
+    copyid=StringProperty()
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+        
+    def execute(self, context):
+        
+        ctcopy=self.ctcopy
+        update_sides(self,context,ctcopy)
+        if ctcopy.lr_LR=='L>R':lambd_find=lambda x:x.sideX=='L'
+        elif ctcopy.lr_LR=='R>L':lambd_find=lambda x:x.sideX=='R'
+        
+        sources=[a for a in ctcopy.copy_src_track if a.ttype=='Bone' and lambd_find(a)]
+        for so in sources:
+            if so.pair==None:continue
+            sma=so.o2.matrix_local
+            sotr=sma.to_translation()
+            soro=sma.to_euler()
+            _tr=[-sotr[0],sotr[1],sotr[2]]
+            _ro=[soro[0],-soro[1],-soro[2]]
+            so.pair.location=_tr
+            so.pair.rotation_euler=_ro
+            so.pair.scale=so.o2.scale
+            if ctcopy.lr_insert_kf:
+                for ob in [so.o2,so.pair]:
+                    ob.keyframe_insert(data_path='location')
+                    ob.keyframe_insert(data_path='rotation_euler')
+                    ob.keyframe_insert(data_path='scale')
+        return {'FINISHED'}
+    def invoke(self, context, event):
+        scene=context.scene
+        self.ctcopy=ctcopy=eval(self.copyid)
+
+        return context.window_manager.invoke_props_dialog(self)
+    def draw(self, context):
+        ctcopy=self.ctcopy
+        row=self.layout
+        row.prop(ctcopy,'lr_LR',text='From-To')
+        row=self.layout
+        row.prop(ctcopy,'lr_insert_kf',icon='KEYTYPE_KEYFRAME_VEC')
 
 
 cls=[SimpleConfirmOperator,CopyObjectChangeVG ,
@@ -1214,6 +1273,8 @@ SolveRepeatedUVs,safeRemoveDoubles,
 MHW_ImportManager,emptyVGrenamer,
 updateUsersOfCTC,SetObjectsToggler,
 SaketargetArmature,SaketargetEmpties,CopyCTCops,
+BoneMirrorer,
+
 ]
 def register():
     for cl in cls:
