@@ -1,5 +1,6 @@
 import bpy,glob,os,bmesh
 from re import findall
+from mathutils import Vector, Matrix
 
 def ObjProp(var,obj,val,descr,max=10.0,min=0.0):
  if not obj==None:
@@ -79,7 +80,7 @@ def new_ob(scene,name,mesh=None,link=1):
     o=bpy.data.objects.new(name,mesh)
     if link:
         scene.objects.link(o)
-        scene.update()
+        # scene.update()
     return o
 
 def arma_poll(self,object):
@@ -251,7 +252,8 @@ def update_sides(self,context,col):
         i.sideX='R' if loc[0]<0 else 'L' if loc[0]>0 else '0'
         i.sideY='D' if loc[1]<0 else 'U' if loc[1]>0 else '0'
         i.sideZ='B' if loc[2]<0 else 'F' if loc[2]>0 else '0'
-
+        #Right-Left, Down-Up, Back-Front, only L-R is used atm.
+        
 def find_mirror(o,b_locs):
     if b_locs.get(o)==None or b_locs[o][0][0]==0:return False
     myX=b_locs[o][1]
@@ -407,6 +409,7 @@ def upd_base_paths(self,context):
     mhw=scene.mhwsake
     for _set in mhw.export_set:
         upd_exp_path(_set,context)
+
 infos={'obj_info':
 '''You can put capsules in objects list too.
 Use black dot to toggle export on/off of per object.
@@ -457,3 +460,48 @@ between the objects that had same tag.
 
 '''
  }
+
+##Copied from Asterisk's CTC Tools, modified for easier use without bpy.ops:
+accessScale = lambda scaleVector: scaleVector[0]
+def orientVectorPair(v0,v1):
+    v0 = v0.normalized()
+    v1 = v1.normalized()
+    if v0 == v1:
+        return Matrix.Identity(3)
+    v = v0.cross(v1)
+    #s = v.length
+    c = v0.dot(v1)
+    if c == -1: return Matrix([[-1,0,0],[0,-1,0],[0,0,1]])
+    vx = Matrix([[0,-v[2], v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]])
+    return Matrix.Identity(3)+vx+(1/(1+c))*vx*vx
+    
+def normalProjection(normal,vector):
+    return vector - vector.dot(normal)/normal.length**2*normal
+def orientVectorSystem(star,target,axis):
+    sscale = star.empty_draw_size*accessScale(star.matrix_world.to_scale())
+    star.empty_draw_size = sscale
+    loc = star.location
+    targetVector = target.matrix_world.translation-star.matrix_world.translation
+    M = orientVectorPair(axis,targetVector)
+    star.matrix_local = M.to_4x4()
+    star.location = loc
+
+
+def pointFrameTo(self,object,point_to):
+        vec=Vector([1,0,0])
+        orientVectorSystem(object,point_to,vec)
+        
+################### End of Point Frame To Copied-Altered Section
+
+def fAlignFrames(self,target):
+    ctchil=all_heir(target)
+    node_d,frame_d={},{}
+    for ob in ctchil:
+        if ob.get('Type')=='CTC_*_Frame':
+            frame_d[ob]=ob.parent.parent
+            node_d[ob.parent]=ob
+    for frame in frame_d:
+        nod=frame_d[frame]
+        if node_d.get(nod):
+            to_point=node_d[nod]
+            pointFrameTo(self,to_point,frame)

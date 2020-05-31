@@ -4,7 +4,6 @@ from bpy.types import Operator
 from mathutils import Matrix,Vector
 sys.path.append("..")
 from general_functions import *
-
 import random
 from re import findall
 chrs = 'abvgddjezzijklmnjoprstcufhccdzsh0123456789'
@@ -106,9 +105,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 ctc_col=i
     if ctc_organizer.copy_ctc_bool:
         #_src=all_heir(source)
-        
         fmax=max(list(arma[a] for a in arma if arma[a]!=None))+1
-        ctctrack={}
         
         text_prep,text_new=mhw.header_copy_name,mhw.header_new_names
         _obs=bpy.data.objects
@@ -161,16 +158,12 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             if o==None:continue
             om=o.matrix_world.copy()
             mirror=False
-            
-            
             if o.get('Type') and regular_ctc_names.get(o['Type']):tty=regular_ctc_names[o['Type']]
             else:tty='Bone'
             if header_tar!=None and header_tar!=o and tty=='Header':
                 _o2=ctcO(tty=tty,o=o,o2=header_tar)
-                ctctrack[o]=_o2
                 o2track=ob_in_track(ctc_col,o,armature=target,report=self)
                 if o2track==None:o2track=ob_in_track(ctc_col,o,source,target,header_tar)
-                ctctrack[o]=o2track
                 #self.report({'INFO'},'HEADER %s'%header_tar.name)
                 continue
             
@@ -192,11 +185,8 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             o_id=o_id_b=o.get('boneFunction')
             #if changed_ids.get(o_id):o_id=changed_ids[o_id].changed_id
             o2track=ob_in_track(ctc_col,o,armature=target,report=self)
-
             if tty=='Bone':
 
-                
-                
                 if changed_ids.get(o_id):
                     o2track=changed_ids[o_id]
                     o2=o2track.o2
@@ -209,7 +199,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                         o2track=ob_in_track(ctc_col,o,source,target,o2)
                 mirror=find_mirror(o,b_locs)
                 if mirror:
-                    m_id=mirror+o_id
+                    m_id=str(mirror+o_id)
                     if pairs.get(m_id):obn=pairs[m_id]
                     else:pairs[m_id]=obn
 
@@ -217,7 +207,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 new=1
                 obx=obn#=obn.replace(ext,'')
                 #
-                if o_id_b!=None and mhw.ctc_copy_add_LR and o_id_b>150 and ext=='':
+                if o_id_b!=None and mhw.ctc_copy_add_LR and o_id_b>=150 and ext=='':
                     obn=obn.replace('.R','').replace('.L','')
                     if  all(not obn.endswith(x) for x in ['.L','.R']) and ext=='':
                         tbone_X=om.to_translation()[0]
@@ -238,7 +228,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 if o2==None:
                     o2=new_ob(scene,obn)
                 o2track=ob_in_track(ctc_col,o,source,target,o2)
-                
+                o2track.name=o2.name
                 if tty=='Bone':
                     #reeport(self,bo=o2.name,id=o_id)
                     #if 
@@ -252,26 +242,24 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                             self.report({'INFO'},'Shifted boneFunction %s to %s (%s)'%(o['boneFunction'],fmax,o2.name))
                             o2track.bone_id=fmax
                             fmax+=1
-            if tty=='Bone' and mirror:
-                if pairs2.get(m_id)==None:pairs2[m_id]=[]
-                pairs2[m_id].append(o2track)
+            
             elif o2track.changed_id==0 and o_id!=None:o2track.bone_id=o_id
+            if tty=='Bone' and mirror and o2track.o2!=None:
+                if pairs2.get(m_id)==None:pairs2[m_id]=[]
+                pairs2[m_id].append(o2)
             # if changed_ids.get(pid):o2track.caster=changed_ids[pid]
                     # b_ids[o_id]=o2track
+            
             if tty=='Header':headerr=o2
-            ctctrack[o]=o2track
         if _set.ctc_header==None:
             _set.ctc_header=headerr
             #self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
 
-    sorted_tracks=sort_the_tracks(ctc_col)
-    tr_all_wgt=1
-    for mbo in [a for a in pairs2 if len(pairs2[a])==2]:
-        pp1,pp2=pairs2[mbo]
-        pp1.pair=pp2.o2
-        pp2.pair=pp1.o2
-        
     
+    tr_all_wgt=1
+    scene.update()
+
+
     if tr_all_wgt:
         for sr in src_arma_re:
             if sr==None:continue
@@ -283,7 +271,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
             else:continue
             if new_bonedict.get(src_arma_re[sr].name)==None:new_bonedict[src_arma_re[sr].name]=tname
             
-                
+    sorted_tracks=sort_the_tracks(ctc_col)
     if ctc_organizer.copy_ctc_bool:
         for i in sorted_tracks:
             #if o==None or o2==None:continue
@@ -388,7 +376,15 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
         for m in modif_state_save:m.show_viewport=modif_state_save[m]
         for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
     update_sides(self,context,ctc_col)
-
+    
+    for mbo in pairs2:
+        if len(pairs2[mbo])!=2:continue
+        _x1,_x2=pairs2[mbo]
+        co1=ctc_col.copy_src_track[_x1.name]
+        co2=ctc_col.copy_src_track[_x2.name]
+        #Had to be done this way, for some reason stroing a copy_src_track in array gave violation access error
+        co1.pair=_x2
+        co2.pair=_x1
 def rootfind(self,object):
     findroot=None
     findroots=[]
@@ -1036,7 +1032,7 @@ def set_choose_dynamic(self,context):
     return items
     
 class updateUsersOfCTC(Operator):
-    """Rename Empties and VG adding .R .L"""
+    """Could not think of what to write here"""
     bl_idname = "dpmhw.update_ctc_users"
     bl_label = "Update users of this Set's CTC"
     bl_options = {"UNDO"} 
@@ -1098,7 +1094,7 @@ class updateUsersOfCTC(Operator):
         row=self.layout
         
         
-        row.prop(self,'set_choosing',text='Target(s)')
+        row.prop(self,'set_choosing',text='Choose Target(s)')
         #row.prop_search(self,'tar_ob',context.scene,'objects',text='Target')
         row=self.layout
         row.prop(self,'bones_too',text='Copy bone matrices too?',icon='GROUP_BONE')

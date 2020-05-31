@@ -46,12 +46,13 @@ class mhwExpSetObj(PropertyGroup):
 
     
 class ob_copy_track(PropertyGroup):
-    name=StringProperty() #not needed, pretty sure
+
     caster=PointerProperty(type=bpy.types.Object)
     ctc_src=PointerProperty(type=bpy.types.Object)
     armature=PointerProperty(type=bpy.types.Object)
     o2=PointerProperty(type=bpy.types.Object)
     pair=PointerProperty(type=bpy.types.Object)
+    
     sideX=StringProperty()
     sideY=StringProperty()
     sideZ=StringProperty()
@@ -63,6 +64,7 @@ class ob_copy_track(PropertyGroup):
     changed_id=IntProperty()
     VG=CollectionProperty(type=ob_copy_VG)
     id_name=StringProperty()
+    
     
     #cons=PointerProperty(type=bpy.types.Constraint)
 lr_LR_list=[['L>R','...','TRIA_RIGHT'],
@@ -139,6 +141,7 @@ class mhwExpSet(PropertyGroup):
     ctc_header=PointerProperty(type=bpy.types.Object,poll=header_copy_poll)
     ctc_copy_src=CollectionProperty(type=ctc_copy_sources)
     ctc_organizer=CollectionProperty(type=ctc_copy_organizer)
+    AlignFrames=BoolProperty(default=1,description='Aligns frame by frame to next one in parent hierarchy, leaving last one at 0 rotation')
     
     show_ctc_manager=BoolProperty()
     export_path=StringProperty()
@@ -436,11 +439,15 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
         _ext='.ctc'
         uni_root=_set.ctc_header
         uni_target='CTC'
+        if _set.AlignFrames:
+            fAlignFrames(self,uni_root)
+
     elif expwhat=='CCL':
         _ext='.ccl'
         uni_root='None'
         uni_target='CCL'
     #if expwhat=='Mod3':
+    
     type_resets=['CTC','SkeletonRoot','CCL']
     for o in scene.objects:
         
@@ -706,9 +713,9 @@ class dpMHW_panel(bpy.types.Panel):
                 row=zbox.row(align=1)
                 row.label('[%s], EXPORT:'%aktset,icon='ZOOM_SELECTED')
                 row=zbox.row(align=1)
-                row.operator('scene.dpmhw_button',text='MOD3',icon_value=ico('export')).func='MHW_Export'
-                row.operator('scene.dpmhw_button',text='CTC',icon='MOD_SIMPLEDEFORM').func='MHW_Export_CTC'
-                row.operator('scene.dpmhw_button',text='CCL',icon='META_CAPSULE').func='MHW_Export_CCL'
+                row.operator('dpmhw.uni_exporter',text='MOD3',icon_value=ico('export')).func='Mod3'
+                row.operator('dpmhw.uni_exporter',text='CTC',icon='MOD_SIMPLEDEFORM').func='CTC'
+                row.operator('dpmhw.uni_exporter',text='CCL',icon='META_CAPSULE').func='CCL'
                 if _set.export_path!='':
                     row2=zbox.row(align=1)
                     row2.label(_set.export_path)
@@ -987,8 +994,7 @@ def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
        # if scenelist==[]:scenelist=[s for s in bpy.data.scenes]
        # for scene in scenelist:
             # mhw=scene.mhwsake
-def ImportBySet(self,context):
-    pass
+
 @persistent
 def post_load(scene):
 
@@ -1041,9 +1047,6 @@ class dpmhwButton(Operator):
         #wiz=scene.Bwiz
         if self.func=='Save Settings':SaveSettings(context)
         elif self.func=='ApplySettingsToScenes':ApplySettingsToScenes(self.name,context)
-        elif self.func=='MHW_Export':MHW_Export(self,context)
-        elif self.func=='MHW_Export_CTC':MHW_Export(self,context,'CTC')
-        elif self.func=='MHW_Export_CCL':MHW_Export(self,context,'CCL')
         elif self.func=='refresh_armor_numbers':refresh_settings(settings=0,event=self.sevent)
         elif self.func=='reload_settings':refresh_settings(armor=0,event=self.sevent)
         elif self.func=='goto_set_dir': #not implemented yet, go to directory
@@ -1084,6 +1087,33 @@ class dpmhwButton(Operator):
         self.confirmer=False
         return {'FINISHED'}
         
+class UniExporter(Operator): 
+    """Export MOD3/CTC/CCL, prompts for some options"""
+    bl_idname = "dpmhw.uni_exporter"
+    bl_label = "Export Operator"
+    bl_options = {"REGISTER", "UNDO"} 
+
+    func=StringProperty()
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+        
+    def invoke(self, context, event):
+        scene=context.scene
+        mhw=scene.mhwsake
+        self._set=_set=mhw.export_set[mhw.oindex]
+        
+        return context.window_manager.invoke_props_dialog(self)
+    def execute(self, context):
+        MHW_Export(self,context,self.func)
+        
+        return {'FINISHED'}
+    def draw(self,context):
+        row=self.layout
+        _set=self._set
+        if self.func=='CTC':
+            row.prop(_set,'AlignFrames',text='Align All Frames',icon='ALIGN')
 
 def register():
     #if post_load in bpy.app.handlers.load_post: return
