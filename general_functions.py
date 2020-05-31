@@ -45,6 +45,13 @@ def all_heir(ob, levels=25,names=False):
     recurse(ob, ob.parent, 0)
     return oreturn
 
+def realignCons(object):
+    con=object.constraints.get('Bone Function')
+    if con:
+        con.inverse_matrix=object.parent.matrix_world.inverted()
+        con.target=con.target
+        bpy.context.scene.update()
+
 def remove_unused_vg(ob):
     vgroup_used = {i: False for i, k in enumerate(ob.vertex_groups)}
     for v in ob.data.vertices:
@@ -493,13 +500,16 @@ def pointFrameTo(self,object,point_to):
         
 ################### End of Point Frame To Copied-Altered Section
 
-def fAlignFrames(self,target):
+def fAlignVarious(self,target,align_frames=0,align_nodes=0): #Used in Export CTC only so far
+    if align_frames==0 and align_nodes==0:return
     ctchil=all_heir(target)
     node_d,frame_d={},{}
     for ob in ctchil:
-        if ob.get('Type')=='CTC_*_Frame':
+        if ob.get('Type')=='CTC_*_Frame' and align_frames:
             frame_d[ob]=ob.parent.parent
             node_d[ob.parent]=ob
+        if ob.get('Type')=='CTC_Node' and align_nodes:
+            realignCons(ob)
     for frame in frame_d:
         nod=frame_d[frame]
         if node_d.get(nod):

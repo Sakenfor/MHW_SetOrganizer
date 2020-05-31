@@ -147,6 +147,7 @@ class mhwExpSet(PropertyGroup):
     ctc_copy_src=CollectionProperty(type=ctc_copy_sources)
     ctc_organizer=CollectionProperty(type=ctc_copy_organizer)
     AlignFrames=BoolProperty(default=1,description='Aligns frame by frame to next one in parent hierarchy, leaving last one at 0 rotation')
+    AlignNodes=BoolProperty(default=0,description='Aligns nodes to Bones of the set being exported')
     
     show_ctc_manager=BoolProperty()
     export_path=StringProperty()
@@ -349,7 +350,7 @@ def ApplySettingsToScenes(var,context):
         mhw=scene.mhwsake
         setattr(mhw,var,var_val)
 
-def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_custom_path=True,is_batch=False):
+def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_custom_path=True,is_batch=False,event=False):
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
@@ -444,8 +445,10 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
         _ext='.ctc'
         uni_root=_set.ctc_header
         uni_target='CTC'
-        if _set.AlignFrames:
-            fAlignFrames(self,uni_root)
+        if not event.ctrl:
+            fAlignVarious(self,uni_root,
+            align_frames=_set.AlignFrames,
+            align_nodes=_set.AlignNodes)
 
     elif expwhat=='CCL':
         _ext='.ccl'
@@ -1093,7 +1096,7 @@ class dpmhwButton(Operator):
         return {'FINISHED'}
         
 class UniExporter(Operator): 
-    """Export MOD3/CTC/CCL, prompts for some options"""
+    """Hold shift to not prompt options, hold Ctrl to force all options to False"""
     bl_idname = "dpmhw.uni_exporter"
     bl_label = "Export Operator"
     bl_options = {"REGISTER", "UNDO"} 
@@ -1107,19 +1110,22 @@ class UniExporter(Operator):
     def invoke(self, context, event):
         scene=context.scene
         mhw=scene.mhwsake
+        self.eventt=event
         self._set=_set=mhw.export_set[mhw.oindex]
-        
-        return context.window_manager.invoke_props_dialog(self)
+        if event.shift:
+            return self.execute(context)
+        else:
+            return context.window_manager.invoke_props_dialog(self)
     def execute(self, context):
-        MHW_Export(self,context,self.func)
+        MHW_Export(self,context,self.func,event=self.eventt)
         
         return {'FINISHED'}
     def draw(self,context):
         row=self.layout
         _set=self._set
         if self.func=='CTC':
-            row.prop(_set,'AlignFrames',text='Align All Frames',icon='ALIGN')
-
+            row.prop(_set,'AlignFrames',text='Align All Frames',icon='META_ELLIPSOID')
+            row.prop(_set,'AlignNodes',text='Realign All Nodes',icon='META_BALL')
 def register():
     #if post_load in bpy.app.handlers.load_post: return
     global custom_icons

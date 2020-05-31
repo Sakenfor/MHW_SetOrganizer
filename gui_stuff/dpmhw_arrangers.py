@@ -177,6 +177,7 @@ class dpMHW_drawObjSet(bpy.types.UIList):
             if _set.obj_views=='None':
                 layout.operator('dpmhw.uvsolves',text='',icon='GROUP_UVS').tar_ob=item.obje.name
                 layout.operator('dpmhw.safedoubleremove',text='',icon='VERTEXSEL').tar_ob=item.obje.name
+                layout.prop(item.obje,'hide',text='')
             elif _set.obj_views=='Other':
                 hooks=[m for m in item.obje.modifiers if m.type=='HOOK' and m.object!=None]
                 if hooks:layout.prop(item,'apply_hooks',text='',icon='HOOK')
