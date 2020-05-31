@@ -34,6 +34,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
     found_root=None
     changed_ids,b_ids={},{}
     new_bonedict={}
+    rigname='MHW Statyk %s Character Rig'%{'f':'Female','m':'Male'}[_set.gender]
     if mhw.ctc_copy_use_active:
         target=scene.active_object if _set.empty_root==None else _set.empty_root
     else:
@@ -82,7 +83,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
         self.report({'ERROR'},'Missing; Source: %s, Target %s'%(str(source),str(target)))
         return
     valid_obs=[a for a in _set.eobjs if a.export==1 and a.obje!=None and a.obje.name in scene.objects]
-    bone_additional=list(set([a for a in bone_additional if a!=None and  a.get('boneFunction')]))
+    bone_additional=list(set([a for a in bone_additional if a!=None and  a.get('boneFunction')!=None]))
     source_set=None
     tag_dict=get_tags(_set,where='Target')
 
@@ -259,7 +260,6 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
     tr_all_wgt=1
     scene.update()
 
-
     if tr_all_wgt:
         for sr in src_arma_re:
             if sr==None:continue
@@ -318,6 +318,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
 
             scene.update()
     modif_state_save,ob_state_save={},{} #TODO, choose to use modifiers or not
+    print(new_bonedict)
     if ctc_organizer.transfer_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
@@ -338,10 +339,15 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 oco.data=mcopy
                 scene.objects.link(oco)
                 scene.update()
+                
                 for w in oco.vertex_groups:
-                    
                     if new_bonedict.get(w.name):
                         w.name=new_bonedict[w.name].name
+                        if orga.remove_vg_before_transfer:
+                            for o in valid_obs:
+                                #reeport(self,v1=o.obje.vertex_groups.get(w.name),v2=bpy.data.objects[w.name]['boneFunction']>=150,ob=o.obje.name)
+                                if o.obje.vertex_groups.get(w.name) and bpy.data.objects[w.name]['boneFunction']>=150:
+                                    o.obje.vertex_groups.remove(group=o.obje.vertex_groups[w.name])
                     else:
                         oco.vertex_groups.remove(w)
                         continue
@@ -369,8 +375,22 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                 
                 bpy.data.objects.remove(oco)
                 bpy.data.meshes.remove(mcopy)
-
+        if orga.remove_vg_not_found:
+            if bpy.data.objects.get(rigname)!=None:
+                aux_bones=[a.name for a in bpy.data.objects[rigname].pose.bones]
+            else:aux_bones=[]
+            all_bones=all_heir(target,names=1)
+            for t in [a for a in _set.eobjs if a!=None]:
+                remvg=[]
+                for vg in t.obje.vertex_groups:
+                    if vg.name not in all_bones and vg.name not in aux_bones:
+                        remvg.append(vg.name)
+                        t.obje.vertex_groups.remove(group=vg)
+                if remvg!=[]:self.report({'INFO'},"Object %s, removed unused groups: %s"%(t.obje.name,', '.join(a for a in remvg)))
+            
+        
         for t in tag['Target']:
+
             weight_clean(self,context,ctc_organizer,t)
 
         for m in modif_state_save:m.show_viewport=modif_state_save[m]
@@ -1206,7 +1226,11 @@ class CopyCTCops(Operator):
         row=layout.row()
         row.prop(_org,'wgt_limit')
         row=layout.row()
-        
+        row.label('Remove Vertex Groups..')
+        row=layout.row()
+        row.prop(_org,'remove_vg_not_found',icon='GROUP_VERTEX',text='..Not Found in Bones')
+        row.prop(_org,'remove_vg_not_found',icon='GROUP_VERTEX',text='..Before Weight Transfer')
+        row=layout.row()
         
         ebox=row.box()
         row=ebox.row()

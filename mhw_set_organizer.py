@@ -111,6 +111,11 @@ class ctc_copy_organizer(PropertyGroup):
     normalize_after=BoolProperty(default=1)
     clean_after=BoolProperty(default=1)
     limit_after=BoolProperty(default=1,description='Limit the total groups per vertex, based on Mesh Block Label')
+
+    remove_vg_not_found=BoolProperty(default=1)
+    remove_vg_before_transfer=BoolProperty(default=1,description='Will not remove <150 bone ID Vertex Groups')
+    
+
 sk_methods=[['Global Key Name','...','SHAPEKEY_DATA'],
 ['Active Keys','Will apply all Shape Keys and their current values (Skipping muted keys)','KEY_HLT'],
 ['Specific Keys','Applies Key assigned per object','SHAPEKEY_DATA'],
@@ -148,7 +153,7 @@ class mhwExpSet(PropertyGroup):
     import_path=StringProperty()
     is_batch=BoolProperty()
     more_obj_options=BoolProperty(default=1)
-    
+
     copy_obj_src=PointerProperty(type=bpy.types.Object,poll=mesh_poll)
     #Shape Keys
     sk_choice=StringProperty(description='Choose a global shape key that all objects (optionally) can have, to apply on export')

@@ -34,12 +34,12 @@ def reeport(self,**args):
     for s in args:rep.append(' %s: %s '%(s,args[s]))
     self.report({'INFO'},', '.join(a for a in rep))
     
-def all_heir(ob, levels=25):
+def all_heir(ob, levels=25,names=False):
     oreturn=[]
     def recurse(ob, parent, depth):
         if depth > levels: 
             return
-        oreturn.append(ob)
+        oreturn.append(ob if not names else ob.name)
         for child in ob.children:
             recurse(child, ob,  depth + 1)
     recurse(ob, ob.parent, 0)
