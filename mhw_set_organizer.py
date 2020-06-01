@@ -160,6 +160,7 @@ class mhwExpSet(PropertyGroup):
     sk_choice=StringProperty(description='Choose a global shape key that all objects (optionally) can have, to apply on export')
     sk_how=EnumProperty(items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(sk_methods)])
     
+    toggler_hideselect=BoolProperty()
     sk_use=BoolProperty(default=1)
     
     obj_views=EnumProperty(name='Object Options Display',default='None',
@@ -431,7 +432,9 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
                             bpy.ops.object.mode_set(mode='OBJECT')
                             dummy.data.update()
                             bpy.ops.object.shape_key_remove(all=True)
-                    
+                        else:
+                            
+                            bpy.ops.object.shape_key_remove(all=True)
                 #Hook:
                 hooks=[h for h in dummy.modifiers if  h.type=='HOOK' and h.object!=None]
                 if hooks!=[] and o.apply_hooks:

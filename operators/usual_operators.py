@@ -318,7 +318,6 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
 
             scene.update()
     modif_state_save,ob_state_save={},{} #TODO, choose to use modifiers or not
-    print(new_bonedict)
     if ctc_organizer.transfer_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
@@ -405,6 +404,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
         #Had to be done this way, for some reason stroing a copy_src_track in array gave violation access error
         co1.pair=_x2
         co2.pair=_x1
+
 def rootfind(self,object):
     findroot=None
     findroots=[]
@@ -479,6 +479,7 @@ class SimpleConfirmOperator(Operator):
         row.prop(self,"keep_bones",text="Keep ALL Bones?",icon='BONE_DATA')
         row=self.layout
         row.prop(self,'remove_vg',text='Remove Vertex Groups Associated?',icon='SNAP_VERTEX')
+
 class CopyObjectChangeVG(Operator):
     """Copy/Replace a object, changing the vertex group names, copying properties if need, etc."""
     bl_idname = "dpmhw.copy_object"
@@ -728,7 +729,7 @@ class MHW_ImportManager(Operator):
             row.prop(_set,'ccl_missingFunctionBehaviour')
 useful_modifiers=['HOOK']
 class safeRemoveDoubles(Operator): 
-    """Safely merge double vertices, hold Shift to choose last chosen options!"""
+    """Safely merge double vertices, hold Shift to choose last chosen options"""
     bl_idname = "dpmhw.safedoubleremove"
     bl_label = "Safely Remove Double Vertices"
     bl_options = {"REGISTER", "UNDO"} 
@@ -736,7 +737,7 @@ class safeRemoveDoubles(Operator):
     pres_methods=[['Normals Split','Use the split normals modifier','MOD_NORMALEDIT'],
     ['Normals Transfer','Use the transfer normals modifier','OBJECT_DATA']]
     tar_ob=StringProperty()
-    pres_method=EnumProperty(items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(pres_methods)])
+    pres_method=EnumProperty(default='Normals Transfer',items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(pres_methods)])
     
     @classmethod
     def poll(cls, context):
@@ -1019,7 +1020,9 @@ class SetObjectsToggler(Operator):
     bl_idname = "dpmhw.set_objects_toggler"
     bl_label = "Show objects"
     bl_options = {"REGISTER", "UNDO"} 
+    
     var1=StringProperty()
+    func=StringProperty()
     
     @classmethod
     def poll(cls, context):
@@ -1028,19 +1031,25 @@ class SetObjectsToggler(Operator):
     def execute(self, context):
         scene=context.scene
         _set=eval(self.var1)
-        total_list=[_set.empty_root,_set.ctc_header]
-        if not self.ev.shift:
-            bpy.ops.object.select_all(action='DESELECT')
-            bpy.ops.object.hide_view_set(unselected=True)
+        if self.func=='show_toggle':
+            total_list=[_set.empty_root,_set.ctc_header]
+            if not self.ev.shift:
+                bpy.ops.object.select_all(action='DESELECT')
+                bpy.ops.object.hide_view_set(unselected=True)
 
-        total_list.extend([a.obje for a in _set.eobjs])
-        for ob in [a for a in total_list if a!=None]:
-            
-            ob.hide=False
-            if ob.parent==None:
-                for _o in [a for a in all_heir(ob) if a!=None]:
-                    _o.hide=False
-                    
+            total_list.extend([a.obje for a in _set.eobjs])
+            for ob in [a for a in total_list if a!=None]:
+                
+                ob.hide=False
+                if ob.parent==None:
+                    for _o in [a for a in all_heir(ob) if a!=None]:
+                        _o.hide=False
+        elif self.func=='hideselect_toggle':
+            total_list=[a.obje for a in _set.eobjs if a.obje !=None]
+            for o in total_list:
+                o.hide_select=_set.toggler_hideselect
+            if _set.toggler_hideselect:_set.toggler_hideselect=False
+            else:_set.toggler_hideselect=True
         return {'FINISHED'}
     def invoke(self, context, event):
         self.ev=event

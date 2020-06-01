@@ -152,8 +152,11 @@ class dpMHW_drawSet(bpy.types.UIList):
         layout.prop(item, "name", text="", emboss=False, icon_value=icon)
         in_set=[a for a in context.selected_objects if any(a==o.obje for o in item.eobjs if a!=None)]
         if in_set!=[]:layout.label(text='[%s]'%len(in_set),icon='MESH_CUBE')
-        op=layout.operator('dpmhw.set_objects_toggler',text='',icon='GHOST_DISABLED')
-        op.var1='scene.%s'%item.path_from_id()
+        oplink='scene.%s'%item.path_from_id()
+        op=layout.operator('dpmhw.set_objects_toggler',text='',icon='RESTRICT_RENDER_OFF')
+        op.var1,op.func=oplink,'show_toggle'
+        op=layout.operator('dpmhw.set_objects_toggler',text='',icon=['RESTRICT_SELECT_ON','RESTRICT_SELECT_OFF'][item.toggler_hideselect])
+        op.var1,op.func=oplink,'hideselect_toggle'
     def invoke(self, context, event):        
         pass  
         
@@ -161,6 +164,8 @@ class dpMHW_drawObjSet(bpy.types.UIList):
     """Set objects drawing"""
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         ik='MESH_CAPSULE' if item.obje!=None and item.obje.get('Type') and item.obje['Type']=='CCL' else 'OBJECT_DATAMODE'
+        if item.obje!=None:
+            ik='SPACE2' if context.active_object==item.obje else 'SPACE3' if item.obje.select==1 else ik
         mhw=bpy.context.scene.mhwsake
         _set=mhw.export_set[mhw.oindex]
 
