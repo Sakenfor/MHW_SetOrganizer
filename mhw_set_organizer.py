@@ -391,7 +391,7 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
                 scene.update()
             elif hooksvalid or skvalid:
                 
-                
+                self.report({'INFO'},'%s Hooks: %s Shape Keys: %s'%(o.name,hooksvalid,skvalid))
                 origname=_obj.name
                 dummy=_obj.copy()
                 scene.objects.link(dummy)
@@ -400,7 +400,7 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
                 else:
                     dumdata=_obj.data.copy()
                     dummy.data=dumdata
-                hook_del.append(dumdata)
+                hook_del.append(dumdata)#Mesh+Object will be deleted after
                 faken='hooksave_%s'%origname
                 _obj.name=faken
                 hook_save[_obj]=origname
@@ -771,7 +771,7 @@ class dpMHW_panel(bpy.types.Panel):
                 row2.prop(_set,'armor_part',text='',icon_value=ico(_set.armor_part),expand=0)
                 row2.prop(_set,'gender',text='',expand=0)
                 row2=sbox.row(align=1)
-                row2.prop_search(_set,'empty_root',bpy.data,'objects',text='Root',icon='OUTLINER_OB_MESH')
+                row2.prop_search(_set,'empty_root',scene,'objects',text='Root',icon='OUTLINER_OB_MESH')
                 row2=sbox.row(align=1)
                 row2.prop(_set,'ctc_header',text='CTC_header',icon='OUTLINER_OB_FORCE_FIELD')
                 row2=sbox.row(align=1)
@@ -946,8 +946,7 @@ class dpMHW_panel(bpy.types.Panel):
                         row=sbox.row()
                         zbox=row.box()
                         row=zbox.row()
-                        row.label("Active Set Object's settings:")
-                        row.label(akt_ob.obje.name,icon='ALIASED')
+                        row.label(text="%s's Additional Options:"%akt_ob.obje.name,icon='ALIASED')
                         row=zbox.row()
                         row.prop(akt_ob,'material_name',text="Mat",icon='MATCAP_14')
                         row.prop(akt_ob,'accept_weight_transfer',text='Accept Weight Transfer',icon='COLORSET_06_VEC')

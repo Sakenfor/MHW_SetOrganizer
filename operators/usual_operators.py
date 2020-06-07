@@ -198,12 +198,13 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                     o2=arma_re[o_id]
                     if o2track==None:
                         o2track=ob_in_track(ctc_col,o,source,target,o2)
+                
                 mirror=find_mirror(o,b_locs)
                 if mirror:
                     m_id=str(mirror+o_id)
                     if pairs.get(m_id):obn=pairs[m_id]
                     else:pairs[m_id]=obn
-
+            if source==header_tar:o2=o
             if o2track==None:
                 new=1
                 obx=obn#=obn.replace(ext,'')
@@ -235,7 +236,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                     #if 
                     #pid=source_bone_hie[o_id]
                     if o2track.bone_id==0:o2track.bone_id=o_id
-                    if o_id >= 150 and arma_re.get(o_id)!=None: #and o2track.is_new==1:
+                    if o_id >= 150 and arma_re.get(o_id)!=None and source!=header_tar: #and o2track.is_new==1:
                        
                         if o2track.changed_id==0:
                             #o_id=fmax
@@ -318,6 +319,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
 
             scene.update()
     modif_state_save,ob_state_save={},{} #TODO, choose to use modifiers or not
+    print(tag_dict)
     if ctc_organizer.transfer_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
@@ -343,7 +345,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                     if new_bonedict.get(w.name):
                         w.name=new_bonedict[w.name].name
                         if ctc_organizer.remove_vg_before_transfer:
-                            for o in valid_obs:
+                            for o in tag['Target']:#valid_obs:
                                 #reeport(self,v1=o.obje.vertex_groups.get(w.name),v2=bpy.data.objects[w.name]['boneFunction']>=150,ob=o.obje.name)
                                 if o.obje.vertex_groups.get(w.name) and bpy.data.objects[w.name]['boneFunction']>=150:
                                     o.obje.vertex_groups.remove(group=o.obje.vertex_groups[w.name])

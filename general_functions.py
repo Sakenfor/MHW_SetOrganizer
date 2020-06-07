@@ -95,7 +95,7 @@ def arma_poll(self,object):
 def header_copy_poll(self,object):
     return object.get('Type') and object['Type']=='CTC'
 def empty_root_poll(self,object):
-    return object.parent==None
+    return object.parent==None and object.data==None and object.get('Type')!='CTC'
 def mesh_poll(self,object):
     return object.type=='MESH'
 def has_att(ob,name,str1=None):
