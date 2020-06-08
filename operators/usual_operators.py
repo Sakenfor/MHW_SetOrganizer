@@ -27,7 +27,7 @@ class ctcO():
     def set_parent(self,parent):
         if not self.ex('parent'):self.parent=parent
 
-def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Most Messy Code You Have Ever Seen.
+def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_dict): #AKA, The Most Messy Code You Have Ever Seen.
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
@@ -84,17 +84,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
         return
     valid_obs=[a for a in _set.eobjs if a.export==1 and a.obje!=None and a.obje.name in scene.objects]
     bone_additional=list(set([a for a in bone_additional if a!=None and  a.get('boneFunction')!=None]))
-    source_set=None
-    tag_dict=get_tags(_set,where='Target')
 
-    for s in bpy.data.scenes:
-        for se in s.mhwsake.export_set:
-            if se.ctc_header==source and source!=None:
-                source_set=se
-                tag_dict=get_tags(se,tag_dict,where='Source')
-                break
-    
-    
     if not any(s.source==source for s in _set.ctc_copy_src):
         ctc_col=_set.ctc_copy_src.add()
         ctc_col.name=source.name
@@ -264,13 +254,15 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
     if tr_all_wgt:
         for sr in src_arma_re:
             if sr==None:continue
+            if arma_re.get(sr):new_bonedict[src_arma_re[sr].name]=arma_re[sr]
             if changed_ids.get(sr) and changed_ids[sr].caster==src_arma_re[sr]:
                 tname=changed_ids[sr].o2
             # elif arma_re.get(sr) and changed_ids.get(sr)==None:
                 # tname=arma_re[sr]
                 
             else:continue
-            if new_bonedict.get(src_arma_re[sr].name)==None:new_bonedict[src_arma_re[sr].name]=tname
+            #if new_bonedict.get(src_arma_re[sr].name)==None:
+            new_bonedict[src_arma_re[sr].name]=tname
             
     sorted_tracks=sort_the_tracks(ctc_col)
     if ctc_organizer.copy_ctc_bool:
@@ -319,36 +311,59 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
 
             scene.update()
     modif_state_save,ob_state_save={},{} #TODO, choose to use modifiers or not
-    print(tag_dict)
+
     if ctc_organizer.transfer_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
             if tag['Target']==[] or tag['Source']==[]:continue
-            
+
             for s in tag['Target']+tag['Source']:
-                ob_state_save[s]=[s.hide,s.hide_select]
-                s.hide=0
-                s.hide_select=0
-                for m in [a for a in s.modifiers if a.type!='SUBSURF']:
+                ob_state_save[s.obje]=[s.obje.hide,s.obje.hide_select]
+                s.obje.hide=0
+                s.obje.hide_select=0
+                for m in [a for a in s.obje.modifiers if a.type!='SUBSURF']:
                     modif_state_save[m]=m.show_viewport
                     m.show_viewport=0
-            for s in tag['Source']:
-
+            for _s in tag['Source']:
+                s=_s.obje
                 #mco=s.data.copy()
                 oco=s.copy()#new_ob(s.name+'_weight_source',mco)
                 mcopy=s.data.copy()
                 oco.data=mcopy
+                
                 scene.objects.link(oco)
                 scene.update()
                 
+                del_mat_slots = []
+                m_list={m.name:i for i,m in enumerate(s.material_slots)}
+                for m in [a for a in ctc_organizer.trf_mat_ch if a.obje==s]:
+                    ma=m.mate.name
+                    if ma in s.material_slots and m.toggle==False:
+                        del_mat_slots.append(m_list[ma])
+                if del_mat_slots: #Same as del_mat_slots!=[]
+                    faces2del = []
+                    bm = bmesh.new()
+                    bm.from_mesh(mcopy)
+
+                    for face in bm.faces:
+                        if face.material_index in del_mat_slots:
+                            faces2del.append(face)
+                            
+                    bmesh.ops.delete(bm, geom=faces2del, context=5)
+                    bm.to_mesh(mcopy)
+                    bm.free()
+                    
+                wgt_rem_rng=ctc_organizer.rem_vg_b4_range
+                wgRangeLambda=lambda x:x==x if wgt_rem_rng=='All Groups' else lambda x:x['boneFunction']<150 if wgt_rem_rng=='Below 150 ID' else lambda x:x['boneFunction']>=150
                 for w in oco.vertex_groups:
                     if new_bonedict.get(w.name):
                         w.name=new_bonedict[w.name].name
                         if ctc_organizer.remove_vg_before_transfer:
-                            for o in tag['Target']:#valid_obs:
+                            for _o in tag['Target']:#valid_obs:
+                                o=_o.obje
                                 #reeport(self,v1=o.obje.vertex_groups.get(w.name),v2=bpy.data.objects[w.name]['boneFunction']>=150,ob=o.obje.name)
-                                if o.obje.vertex_groups.get(w.name) and bpy.data.objects[w.name]['boneFunction']>=150:
-                                    o.obje.vertex_groups.remove(group=o.obje.vertex_groups[w.name])
+                                if o.vertex_groups.get(w.name) and wgRangeLambda(bpy.data.objects[w.name]):
+                                    o.vertex_groups.remove(group=o.vertex_groups[w.name])
                     else:
                         oco.vertex_groups.remove(w)
                         continue
@@ -359,9 +374,10 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
                     bool2=bo['boneFunction']<150 and ctc_organizer.wgt_limit=='Above 150 ID'
                     if bool1 or bool2:oco.vertex_groups.remove(w)
                         
-                for t in tag['Target']:
+                for _t in tag['Target']:
+                    t=_t.obje
                     if t.name not in scene.objects:continue
-                    weight_transfer(self,context,oco,t)
+                    weight_transfer(self,context,oco,t,bmesh_grp=ttag if (_t.tags.get(ttag) and _t.tags[ttag].use) else False)
                     # if _set.normalize_active:
                         # t.select=1
                         # scene.update()
@@ -392,7 +408,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer): #AKA, The Mos
         
         for t in tag['Target']:
 
-            weight_clean(self,context,ctc_organizer,t)
+            weight_clean(self,context,ctc_organizer,t.obje)
 
         for m in modif_state_save:m.show_viewport=modif_state_save[m]
         for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
@@ -764,12 +780,16 @@ class safeRemoveDoubles(Operator):
             osave=[oob.hide,oob.hide_select]
             oob.hide=0
             oob.hide_select=0
+
+            
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.reveal()
             bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.remove_doubles()
+            bpy.ops.mesh.select_all(action='DESELECT')
             bpy.ops.object.mode_set(mode='OBJECT')
+            
             scene.update()
             mname='dpmhw_normals_pres'
             if self.pres_method=='Normals Split':
@@ -1146,7 +1166,7 @@ class CopyCTCops(Operator):
     def execute(self, context):
         scene=context.scene
         
-        CopyCTC(self,context,self.copy_from,self.source,self.source_heir,self._org)
+        CopyCTC(self,context,self.copy_from,self.source,self.source_heir,self._org,self.source_set,self.tag_dict)
         return {'FINISHED'}
     def invoke(self, context, event):
         scene=context.scene
@@ -1206,6 +1226,33 @@ class CopyCTCops(Operator):
                 newE.chain=he
         self._org=_org
         
+        self.source_set=None
+        self.tag_dict=get_tags(_set,where='Target')
+        for s in bpy.data.scenes:
+            for se in s.mhwsake.export_set:
+                if se.ctc_header==source and source!=None:
+                    self.source_set=se
+                    self.tag_dict=get_tags(se,self.tag_dict,where='Source')
+                    break
+        if self.source_set!=None:
+            sso=self.source_set
+            mat_list=[]
+            for t in self.tag_dict:
+                for o in self.tag_dict[t]['Source']:
+                    mat_list.extend([o.obje,m.material] for m in [x for x in o.obje.material_slots if x!=None and x.name!='']   )
+                
+            for obje,mate in mat_list:
+                mcode='%s: %s'%(obje.name,mate.name)
+                if  all([obje,mate]!=[_u.obje,_u.mate] for _u in _org.trf_mat_ch) or len(_org.trf_mat_ch)==0:  
+                #if _org.trf_mat_ch.get(mcode)==None:
+                    iadd=_org.trf_mat_ch.add()
+                    iadd.name=mcode
+                    iadd.obje=obje
+                    iadd.mate=mate
+            m_rem=[i for i,_i in enumerate(_org.trf_mat_ch) if [_i.obje,_i.mate] not in mat_list]
+            for i in m_rem:_org.trf_mat_ch.remove(i)
+                
+        
         return context.window_manager.invoke_props_dialog(self)
         
     def draw(self, context):
@@ -1240,7 +1287,9 @@ class CopyCTCops(Operator):
         row.label('Remove Vertex Groups..')
         row=layout.row()
         row.prop(_org,'remove_vg_not_found',icon='GROUP_VERTEX',text='..Not Found in Bones')
-        row.prop(_org,'remove_vg_not_found',icon='GROUP_VERTEX',text='..Before Weight Transfer')
+        row=layout.row()
+        row.prop(_org,'remove_vg_before_transfer',icon='GROUP_VERTEX',text='..Before Weight Transfer')
+        row.prop(_org,'rem_vg_b4_range',text="")
         row=layout.row()
         
         ebox=row.box()
@@ -1250,6 +1299,12 @@ class CopyCTCops(Operator):
         for i in _org.entries:
             row=ebox.row()
             row.prop(i,'toggle',text=i.chain.name,icon=['PMARKER','PMARKER_SEL'][i.toggle])
+        row=layout.row()
+
+        col = row.column(align=True)
+        row.label('Toggle weight transfer by materials')
+        row=layout.row()
+        row.template_list("dpMHW_drawMaterialChoiceCTC", "", _org, "trf_mat_ch", _org, "oindex", rows=2)
 
 class BoneMirrorer(Operator): 
     """Mirror objects from L>R or R>L"""
@@ -1299,12 +1354,87 @@ class BoneMirrorer(Operator):
         row.prop(ctcopy,'lr_insert_kf',icon='KEYTYPE_KEYFRAME_VEC')
 
 
+class WeightTransferAssigner(Operator): 
+    """Assign vertices to weight transfer TAG"""
+    bl_idname = "dpmhw.wgt_trfer_asgn"
+    bl_label = "Assign Vertices"
+    bl_options = {"REGISTER", "UNDO"} 
+    
+    obje=StringProperty()
+    assign_name=StringProperty()
+    deselect_after=BoolProperty()
+    func=StringProperty()
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+        
+    def execute(self, context):
+        
+        obj=self.obj
+        o=obj.obje
+        asign=self.assign_name
+        scene=bpy.context.scene
+
+        if self.func in ['ASSIGN','SELECT']:
+            ###
+            scene.objects.active=o
+            o.select=1
+            bpy.ops.object.mode_set(mode='EDIT')
+            bm = bmesh.from_edit_mesh(o.data)
+            bm.verts.ensure_lookup_table()
+            me=o.data
+            ###
+            if self.func=='ASSIGN':
+                my_id = (bm.verts.layers.int.get(asign) or 
+                    bm.verts.layers.int.new(asign))
+                
+                for v in bm.verts:
+                    v[my_id] = 1 if v.select else 0
+                bm.verts.ensure_lookup_table()
+                bmesh.update_edit_mesh(o.data)
+                
+                if self.deselect_after:bpy.ops.mesh.select_all(action='DESELECT')
+                bpy.ops.object.mode_set(mode='OBJECT')
+                if obj.tags.get(asign)==None:
+                    aadd=obj.tags.add()
+                    aadd.name=asign
+
+            elif self.func=='SELECT':
+               if asign in bm.verts.layers.int:
+                    vlayer = bm.verts.layers.int[asign]
+                    zz=[v.index for v in me.vertices if 
+                            bm.verts[v.index][vlayer]==1]
+               bpy.ops.object.mode_set(mode='OBJECT')
+               for u in zz:me.vertices[u].select=True
+               bpy.ops.object.mode_set(mode='EDIT')
+        elif self.func=='REMOVE_TAG':
+            obj.tags.remove(asign)
+        
+        return {'FINISHED'}
+    def invoke(self, context, event):
+        scene=context.scene
+        self.obj=obj=eval(self.obje)
+
+        #bpy.ops.object.select_all(action='DESELECT')
+
+        
+        if self.func=='ASSIGN':
+            return context.window_manager.invoke_props_dialog(self)
+        else:
+            return self.execute(context)
+    def draw(self, context):
+        row=self.layout
+        row.prop(self,'deselect_after',icon='BORDER_LASSO',text='Deselect All Verts After')
+        pass
+
+
 cls=[SimpleConfirmOperator,CopyObjectChangeVG ,
 SolveRepeatedUVs,safeRemoveDoubles,
 MHW_ImportManager,emptyVGrenamer,
 updateUsersOfCTC,SetObjectsToggler,
 SaketargetArmature,SaketargetEmpties,CopyCTCops,
-BoneMirrorer,
+BoneMirrorer,WeightTransferAssigner,
 
 ]
 def register():

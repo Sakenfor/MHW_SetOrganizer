@@ -106,7 +106,7 @@ def get_tags(_set,tag_dict=None,where=''):
             for a in [z for z in _set.eobjs if z.tag!='' and z.obje!=None and z.accept_weight_transfer]:
                 for ta in [s for s in a.tag.split(',') if len(s)>1]:
                     if tag_dict.get(ta)==None:tag_dict[ta]={'Source':[],'Target':[]}
-                    tag_dict[ta][where].append(a.obje)
+                    tag_dict[ta][where].append(a)
             return tag_dict
 
 def goto_set_dir(context,ppath):
@@ -120,6 +120,8 @@ def goto_set_dir(context,ppath):
     os.startfile(ppath)
         
     #todo, button that opens a directory of chosen set
+
+
 
 def ctc_edit_col_edit(self,context,var1):
     mhw=context.scene.mhwsake
@@ -203,11 +205,32 @@ def weight_clean(self,context,orga,object):
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
     
-def weight_transfer(self,context,source,target,vmap="POLYINTERP_NEAREST"):
+def weight_transfer(self,context,source,target,vmap="POLYINTERP_NEAREST",bmesh_grp=False):
     scene=context.scene
     scene.objects.active=target
     target.select=1
     bpy.ops.object.mode_set(mode='OBJECT')
+    dummyvg=False
+    if bmesh_grp: #Create a vertex group by bmesh layer (tags)
+            bpy.ops.object.mode_set(mode='EDIT')
+            me=target.data
+            bm = bmesh.from_edit_mesh(me)
+            bm.verts.ensure_lookup_table()
+            if bmesh_grp in bm.verts.layers.int:
+                vlayer = bm.verts.layers.int[bmesh_grp]
+                zz=[v.index for v in me.vertices if 
+                        bm.verts[v.index][vlayer]==1]
+                if zz==[]:return
+            else:return
+            dvgn='dummy_%s'%bmesh_grp
+            tvg=target.vertex_groups
+            if tvg.get(dvgn)!=None:tvg.remove(tvg[dvgn])
+                
+            dummyvg=target.vertex_groups.new(name=dvgn)
+            bpy.ops.object.mode_set(mode='OBJECT')
+            for v in zz:
+                dummyvg.add([v],1.0,'ADD')
+
     mname='%s%s'%(source.name,target.name)
     if target.modifiers.get(mname)==None:
         mm = target.modifiers.new(mname, type='DATA_TRANSFER')
@@ -216,11 +239,11 @@ def weight_transfer(self,context,source,target,vmap="POLYINTERP_NEAREST"):
     mm.data_types_verts={'VGROUP_WEIGHTS'}
     mm.vert_mapping=vmap
     mm.object=source
-    
+    if dummyvg:mm.vertex_group=dummyvg.name
     bpy.ops.object.datalayout_transfer(modifier=mname)
     try:
         bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mname)
-
+        if dummyvg:tvg.remove(dummyvg)
     except:
         self.report({'ERROR'},'Could not apply modifier %s on %s, probably a linked object.'%(mname,target.name))
 

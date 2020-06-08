@@ -29,7 +29,13 @@ class ob_copy_VG(PropertyGroup):
     
     obje=PointerProperty(type=bpy.types.Object)
     #vg=PointerProperty(type=bpy.types.VertexGroup)
-    
+
+
+class colExpObjTag(PropertyGroup):
+    use=BoolProperty(default=1,description='Toggle on or off to use or not this tag group')
+    count=IntProperty()
+
+
 class mhwExpSetObj(PropertyGroup):
     name=StringProperty()
     export=BoolProperty(default=1,description='Tick off to not export this object')
@@ -43,7 +49,7 @@ class mhwExpSetObj(PropertyGroup):
     apply_hooks=BoolProperty(default=1,description="Apply hook modifiers on export (object will be kept same)")
     key_choice=StringProperty()#PointerProperty(type=bpy.types.ShapeKey)
     apply_sk=BoolProperty(default=1) # TODO, not sure how MOD3 Exporter handles shape keys yet.
-
+    tags=CollectionProperty(type=colExpObjTag)
     
 class ob_copy_track(PropertyGroup):
 
@@ -98,6 +104,11 @@ class ctc_copy_col_entries(PropertyGroup):
     chain=PointerProperty(type=bpy.types.Object)
     toggle=BoolProperty(default=1)
 
+class ctc_org_MatChoice(PropertyGroup):
+    toggle=BoolProperty(default=1)
+    obje=PointerProperty(type=bpy.types.Object)
+    mate=PointerProperty(type=bpy.types.Material)
+    
 class ctc_copy_organizer(PropertyGroup):
     entries=CollectionProperty(type=ctc_copy_col_entries)
     source=PointerProperty(type=bpy.types.Object)
@@ -113,9 +124,14 @@ class ctc_copy_organizer(PropertyGroup):
     limit_after=BoolProperty(default=1,description='Limit the total groups per vertex, based on Mesh Block Label')
 
     remove_vg_not_found=BoolProperty(default=1)
-    remove_vg_before_transfer=BoolProperty(default=1,description='Will not remove <150 bone ID Vertex Groups')
+    remove_vg_before_transfer=BoolProperty(default=1,description='Cleaner weight transfer, choose what Bone range Groups can be removed next to this box')
+    rem_vg_b4_range=EnumProperty(name='Remove Range',items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(wgt_trsf_limit)],
+    description="Range of bone IDs in which vertex groups will be removed before transfer of weights")
     
-
+    
+    trf_mat_ch=CollectionProperty(type=ctc_org_MatChoice)
+    oindex=IntProperty()
+    
 sk_methods=[['Global Key Name','...','SHAPEKEY_DATA'],
 ['Active Keys','Will apply all Shape Keys and their current values (Skipping muted keys)','KEY_HLT'],
 ['Specific Keys','Applies Key assigned per object','SHAPEKEY_DATA'],
@@ -939,23 +955,6 @@ class dpMHW_panel(bpy.types.Panel):
                 row.prop(_set,'obj_views',text='Per Object Display')
                 row=sbox.row(align=1)
 
-                if _set.more_obj_options and len(_set.eobjs)>0:
-                    
-                    akt_ob=_set.eobjs[_set.oindex]
-                    if akt_ob.obje!=None:
-                        row=sbox.row()
-                        zbox=row.box()
-                        row=zbox.row()
-                        row.label(text="%s's Additional Options:"%akt_ob.obje.name,icon='ALIASED')
-                        row=zbox.row()
-                        row.prop(akt_ob,'material_name',text="Mat",icon='MATCAP_14')
-                        row.prop(akt_ob,'accept_weight_transfer',text='Accept Weight Transfer',icon='COLORSET_06_VEC')
-
-                        row=zbox.row()
-                        row.prop(akt_ob,'tag',text="Tag(s)",icon='SYNTAX_OFF')
-                        row=zbox.row()
-
-
                 col = row.column(align=True)
                 
                 row.template_list("dpMHW_drawObjSet", "", _set, "eobjs", _set, "oindex", rows=rows)
@@ -965,7 +964,41 @@ class dpMHW_panel(bpy.types.Panel):
                 col.separator()
                 col.operator("scene.dpmhw_obj_arranger", icon='TRIA_UP', text="").action = 'UP'
                 col.operator("scene.dpmhw_obj_arranger", icon='TRIA_DOWN', text="").action = 'DOWN'
-
+                if _set.more_obj_options and len(_set.eobjs)>0:
+                    row=sbox.row(align=1)
+                    akt_ob=_set.eobjs[_set.oindex]
+                    if akt_ob.obje!=None:
+                        row=sbox.row()
+                        zbox=row.box()
+                        row=zbox.row()
+                        row.label(text="%s's Additional Options:"%akt_ob.obje.name,icon='ALIASED')
+                        row=zbox.row()
+                        box2=row.box()
+                        row=box2.row()
+                        row.prop(akt_ob,'material_name',text="Mat",icon='MATCAP_14')
+                        row.prop(akt_ob,'accept_weight_transfer',text='Accept Weight Transfer',icon='COLORSET_06_VEC')
+                        
+                        row=box2.row()
+                        row.prop(akt_ob,'tag',text="Tags(,)",icon='SYNTAX_OFF')
+                        if len(akt_ob.tag)>1:
+                            row=box2.row()
+                            tbox=row.box()
+                            
+                            row=tbox.row()
+                            row.label(text='Tags Options:',icon='SORTALPHA')
+                            row=tbox.row()
+                            op_col='scene.%s'%akt_ob.path_from_id()
+                            for t in akt_ob.tag.split(','):
+                                row=tbox.row()
+                                row.label(text=t,icon='OUTLINER_DATA_EMPTY')
+                                
+                                op=row.operator('dpmhw.wgt_trfer_asgn',text='Assign',icon='UNPINNED')
+                                op.func,op.obje,op.assign_name='ASSIGN',op_col,t
+                                if akt_ob.tags.get(t)!=None:
+                                    op=row.operator('dpmhw.wgt_trfer_asgn',text='Select',icon='RESTRICT_SELECT_OFF')
+                                    op.func,op.obje,op.assign_name='SELECT',op_col,t
+                                    row.prop(akt_ob.tags[t],'use',text='Use',icon='STICKY_UVS_VERT')
+                        row=zbox.row()
 def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
     context=bpy.context
     if armor:

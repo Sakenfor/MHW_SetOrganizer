@@ -56,6 +56,7 @@ class dpMHWSetObjArranger(bpy.types.Operator):
             elif self.action == 'REMOVE':
                 info = 'Item "%s" removed from list' % (aktse.eobjs[idx].name)
                 _set.oindex -= 1
+                if _set.oindex<0:_set.oindex=0
                 aktse.eobjs.remove(idx)
                 self.report({'INFO'}, info)
             
@@ -84,6 +85,7 @@ class dpMHWSetObjArranger(bpy.types.Operator):
                 item.obje=o
                 item.obj_id = len(aktse.eobjs)
                 _set.oindex = len(aktse.eobjs)-1
+                
                 info = '"%s" added to list' % (item.name)
                 self.report({'INFO'}, info)
 
@@ -186,6 +188,7 @@ class dpMHW_drawObjSet(bpy.types.UIList):
             elif _set.obj_views=='Other':
                 hooks=[m for m in item.obje.modifiers if m.type=='HOOK' and m.object!=None]
                 if hooks:layout.prop(item,'apply_hooks',text='',icon='HOOK')
+            
             elif _set.obj_views=='Shape Key' and item.obje.data.shape_keys!=None:
                 #row=layout.row()
                 layout.prop_search(item,'key_choice',item.obje.data.shape_keys,'key_blocks',text='')
@@ -387,6 +390,8 @@ class dpMHW_drawSetOfSets(bpy.types.UIList):
         layout.prop(item, "name", text="", emboss=False, icon_value=icon)
     def invoke(self, context, event):        
         pass  
+        
+
 class dpMHW_drawSetOfSetsObjs(bpy.types.UIList):
     """Set objects drawing"""
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -402,9 +407,23 @@ class dpMHW_drawSetOfSetsObjs(bpy.types.UIList):
     def invoke(self, context, event):        
         pass 
 
+
+class dpMHW_drawMaterialChoiceCTC(bpy.types.UIList):
+    """Set drawing"""
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        #layout.prop(item, "name", text="")
+        layout.label(item.obje.name,icon="OBJECT_DATA")
+        layout.label(item.mate.name,icon="MATCAP_02")
+        layout.prop(item, "toggle", text="Use")
+    def invoke(self, context, event):        
+        pass  
+
 cls=[dpMHWSetObjArranger,dpMHWSetArranger,dpMHW_drawSet,dpMHW_drawObjSet,
 dpMHW_drawSetOfSets,dpMHW_drawSetOfSetsObjs,dpMHWSetOfSetsArranger,dpMHWSetOfSetsObjArranger,
-dpMHWBlenderAppendArranger,dpMHW_drawBlenderAppend]
+dpMHWBlenderAppendArranger,dpMHW_drawBlenderAppend,
+dpMHW_drawMaterialChoiceCTC,
+
+]
 
 def register():
     for cl in cls:
