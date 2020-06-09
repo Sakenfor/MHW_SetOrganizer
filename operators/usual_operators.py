@@ -50,7 +50,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
             if i.empty_root==target:the_set=i
     else:
         the_set=_set
-    header_tar=_set.ctc_header if _set.ctc_header!=None else None
+    header_tar=header_was_none=_set.ctc_header if _set.ctc_header!=None else None
     for ch in ctc_organizer.entries:
         if not ch.toggle:
             #src_heir.remove(ch.chain)
@@ -123,8 +123,10 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
                 if nodebone.parent!=None and nodebone.parent not in total_list:total_list.insert(0,nodebone.parent)
                 
                 list_max_id2.append(nodebone['boneFunction'])
-            if header_tar==None and o.get('Type') and o['Type']=='CTC':
-                header_tar=o
+            if header_tar==None and o.get('Type')=='CTC':
+                header_tar=o.copy()
+                scene.objects.link(header_tar)
+                
         max_id2=max(list_max_id2) if list_max_id2!=[] else 0
         order=total_list[:]
         total_list=sorted(list(set(total_list)),key=lambda x:order.index(x))
@@ -134,9 +136,6 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
     for xx in _set.ctc_copy_src:
         if xx.target!=target:continue
         for a in xx.copy_src_track:
-            if a.ttype=='CTC':
-                header_tar=a.caster
-                if header_tar.name not in scene.objects:scene.objects.link(header_tar)
             if a.ttype!='Bone' or a.bone_id==0:continue
             b_ids[a.bone_id]=a
             if a.changed_id!=0:changed_ids[a.bone_id]=a
@@ -144,6 +143,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
 
     pairs,frame_props,to_parent,pairs2={},{},{},{}
     li=bpy.data.libraries.data.objects
+    
     if ctc_organizer.copy_ctc_bool:
         for isr,o in enumerate(total_list):
             if o==None:continue
@@ -151,13 +151,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
             mirror=False
             if o.get('Type') and regular_ctc_names.get(o['Type']):tty=regular_ctc_names[o['Type']]
             else:tty='Bone'
-            if header_tar!=None and header_tar!=o and tty=='Header':
-                _o2=ctcO(tty=tty,o=o,o2=header_tar)
-                o2track=ob_in_track(ctc_col,o,armature=target,report=self)
-                if o2track==None:o2track=ob_in_track(ctc_col,o,source,target,header_tar)
-                #self.report({'INFO'},'HEADER %s'%header_tar.name)
-                continue
-            
+
             if text_new=='':
                 obn='%s%s'%(text_prep,o.name)
                 
@@ -169,6 +163,14 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
             ext='.R' if '.R' in o.name else '.L' if '.L' in o.name else ''
             count_types[tty]+=1
             if tty not in obn:obn='%s_%s'%(tty,obn) if not mhw.type_infront else '%s_%s'%(obn,tty)
+            
+            if header_tar!=None and header_tar!=o and tty=='Header':
+                _o2=ctcO(tty=tty,o=o,o2=header_tar)
+                o2track=ob_in_track(ctc_col,o,armature=target,report=self)
+                if o2track==None:o2track=ob_in_track(ctc_col,o,source,target,header_tar)
+                header_tar.name=obn                
+                continue
+            
             new,o2=0,None
             if mhw.ctc_copy_add_LR:
                 obn=obn.replace(ext,'')
@@ -242,19 +244,19 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
             # if changed_ids.get(pid):o2track.caster=changed_ids[pid]
                     # b_ids[o_id]=o2track
             
-            if tty=='Header':headerr=o2
+            if tty=='Header':header_tar=o2
         if _set.ctc_header==None:
-            _set.ctc_header=headerr
+            _set.ctc_header=header_tar
             #self.report({'WARNING'},'%s - set header has been set to source copied header.'%_set.ctc_header.name)
 
-    
+        
     tr_all_wgt=1
     scene.update()
-
+    total_bones={}
     if tr_all_wgt:
         for sr in src_arma_re:
             if sr==None:continue
-            if arma_re.get(sr):new_bonedict[src_arma_re[sr].name]=arma_re[sr]
+            if arma_re.get(sr):total_bones[src_arma_re[sr].name]=arma_re[sr]
             if changed_ids.get(sr) and changed_ids[sr].caster==src_arma_re[sr]:
                 tname=changed_ids[sr].o2
             # elif arma_re.get(sr) and changed_ids.get(sr)==None:
@@ -311,7 +313,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
 
             scene.update()
     modif_state_save,ob_state_save={},{} #TODO, choose to use modifiers or not
-
+    total_bones.update(new_bonedict)
     if ctc_organizer.transfer_weights :
         for ttag in tag_dict:
             tag=tag_dict[ttag]
@@ -356,8 +358,8 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
                 wgt_rem_rng=ctc_organizer.rem_vg_b4_range
                 wgRangeLambda=lambda x:x==x if wgt_rem_rng=='All Groups' else lambda x:x['boneFunction']<150 if wgt_rem_rng=='Below 150 ID' else lambda x:x['boneFunction']>=150
                 for w in oco.vertex_groups:
-                    if new_bonedict.get(w.name):
-                        w.name=new_bonedict[w.name].name
+                    if total_bones.get(w.name):
+                        w.name=total_bones[w.name].name
                         if ctc_organizer.remove_vg_before_transfer:
                             for _o in tag['Target']:#valid_obs:
                                 o=_o.obje
@@ -467,7 +469,7 @@ class SimpleConfirmOperator(Operator):
         bremoved=[]
         if delhow=='delete_ctc':
             for o in to_rem.copy_src_track: #[a for a in to_rem.copy_src_track if a.is_new]:
-                if o.ttype=='Bone':
+                if o.ttype=='Bone' and o.bone_id>=150:
                     if self.remove_vg:
                         for obj in sobs:
                             if obj.vertex_groups.get(o.name):
