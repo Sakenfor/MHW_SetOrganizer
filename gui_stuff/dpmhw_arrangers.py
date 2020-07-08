@@ -7,6 +7,7 @@ def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
             self.layout.label(i)
 
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
 class dpMHWSetObjArranger(bpy.types.Operator):
     """Move items up and down, add and remove"""
     bl_idname = "scene.dpmhw_obj_arranger"
@@ -173,7 +174,7 @@ class dpMHW_drawObjSet(bpy.types.UIList):
 
         #l=layout.split(percentage=76,align=1)
         layout.prop_search(item,"obje",bpy.context.scene,'objects',icon=ik,text="")
-        
+        ob_id='scene.%s'%item.path_from_id()
         layout.prop(item, "export", text="", emboss=0, icon=['RADIOBUT_OFF','RADIOBUT_ON'][item.export],expand=0)
 
         if _set.obj_views=='Other':
@@ -183,7 +184,8 @@ class dpMHW_drawObjSet(bpy.types.UIList):
         if item.obje!=None:
             if _set.obj_views=='None':
                 layout.operator('dpmhw.uvsolves',text='',icon='GROUP_UVS').tar_ob=item.obje.name
-                layout.operator('dpmhw.safedoubleremove',text='',icon='VERTEXSEL').tar_ob=item.obje.name
+                safer=layout.operator('dpmhw.safedoubleremove',text='',icon='VERTEXSEL')
+                safer.col_ob=ob_id
                 layout.prop(item.obje,'hide',text='')
             elif _set.obj_views=='Other':
                 hooks=[m for m in item.obje.modifiers if m.type=='HOOK' and m.object!=None]

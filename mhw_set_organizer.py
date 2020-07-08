@@ -50,6 +50,7 @@ class mhwExpSetObj(PropertyGroup):
     key_choice=StringProperty()#PointerProperty(type=bpy.types.ShapeKey)
     apply_sk=BoolProperty(default=1) # TODO, not sure how MOD3 Exporter handles shape keys yet.
     tags=CollectionProperty(type=colExpObjTag)
+    normals_source=PointerProperty(type=bpy.types.Object,poll=mesh_poll)
     
 class ob_copy_track(PropertyGroup):
 
@@ -131,6 +132,7 @@ class ctc_copy_organizer(PropertyGroup):
     
     trf_mat_ch=CollectionProperty(type=ctc_org_MatChoice)
     oindex=IntProperty()
+    copy_props=BoolProperty(default=1,name='Copy Props')
     
 sk_methods=[['Global Key Name','...','SHAPEKEY_DATA'],
 ['Active Keys','Will apply all Shape Keys and their current values (Skipping muted keys)','KEY_HLT'],
@@ -214,10 +216,6 @@ class mhwExpSet(PropertyGroup):
         name = "Import Meshparts.",
         description = "Imports mesh parts as meshes.",
         default = True)
-    import_unknown_mesh_props = BoolProperty(
-        name = "Import Unknown Mesh Properties.",
-        description = "Imports the Unknown section of the mesh collection as scene property.",
-        default = True)
     import_textures = BoolProperty(
         name = "Import Textures.",
         description = "Imports texture as specified by mrl3.",
@@ -226,6 +224,11 @@ class mhwExpSet(PropertyGroup):
         name = "Import Materials.",
         description = "Imports maps as materials as specified by mrl3.",
         default = False)
+    load_group_functions = BoolProperty(
+        name = "Load Bounding Boxes.",
+        description = "Loads the mod3 as bounding boxes.",
+        default = False,
+        )
     texture_path = StringProperty(
         name = "Texture Source",
         description = "Root directory for the MRL3 (Native PC if importing from a chunk).",
@@ -246,10 +249,7 @@ class mhwExpSet(PropertyGroup):
                   ("Slash","Split-Slash Notation","As split weight but also conserves weight order",2),
                   ],
         default = "Group")
-    override_defaults = BoolProperty(
-        name = "Override Default Mesh Properties.",
-        description = "Overrides program defaults with default properties from the first mesh in the file.",
-        default = False)
+
     ctc_missingFunctionBehaviour = EnumProperty(
             name = "Missing Bone Functions",
             description = "Determines what to do while opening a file with missing bone functions",
@@ -368,6 +368,7 @@ def ApplySettingsToScenes(var,context):
         setattr(mhw,var,var_val)
 
 def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,allow_custom_path=True,is_batch=False,event=False):
+    global type_resets
     scene=context.scene
     mhw=scene.mhwsake
     _set=mhw.export_set[mhw.oindex]
@@ -395,7 +396,7 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
     if expwhat=='Mod3':
         _ext='.mod3'
         uni_root=_set.empty_root
-        uni_target='SkeletonRoot'
+        uni_target=type_resets[1]
         
         for o in [a  for a in _set.eobjs if a.obje in valid_obs]:
             _obj=o.obje
@@ -475,7 +476,6 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
         uni_target='CCL'
     #if expwhat=='Mod3':
     
-    type_resets=['CTC','SkeletonRoot','CCL']
     for o in scene.objects:
         
         obsave[o]={'hide':o.hide} #Restoring visibility after export.
@@ -484,7 +484,7 @@ def MHW_Export(self,context,expwhat='Mod3',gamepath=None,nativePCappend=True,all
             o['Type']='aaaa'
         if o==uni_root or (expwhat=='CCL' and o in valid_obs):
             o['Type']=uni_target
-            print('Root/Ctc %s'%uni_root.name)
+            #print('Root/Ctc %s'%uni_root.name)
         if expwhat!='Mod3':continue
         
         if o not in valid_obs:
@@ -953,6 +953,7 @@ class dpMHW_panel(bpy.types.Panel):
                 help1.var1,help1.func='obj_info','show_info'
                 row=sbox.row(align=1)
                 row.prop(_set,'obj_views',text='Per Object Display')
+                batchn=row.operator("dpmhw.batch_nrm_trsf",icon='MOD_NORMALEDIT').ocol='scene.%s'%_set.path_from_id()
                 row=sbox.row(align=1)
 
                 col = row.column(align=True)
@@ -977,7 +978,8 @@ class dpMHW_panel(bpy.types.Panel):
                         row=box2.row()
                         row.prop(akt_ob,'material_name',text="Mat",icon='MATCAP_14')
                         row.prop(akt_ob,'accept_weight_transfer',text='Accept Weight Transfer',icon='COLORSET_06_VEC')
-                        
+                        row=box2.row()
+                        row.prop(akt_ob,'normals_source',text='Normals Source')
                         row=box2.row()
                         row.prop(akt_ob,'tag',text="Tags(,)",icon='SYNTAX_OFF')
                         if len(akt_ob.tag)>1:
@@ -1040,11 +1042,21 @@ def refresh_settings(scenelist=[],settings=1,armor=1,event=False):
 
 @persistent
 def post_load(scene):
-
+    global type_resets
     context = bpy.context
     scene=context.scene
     mhw=scene.mhwsake
     refresh_settings()
+    addonz= context.user_preferences.addons
+    m3imp=sys.modules["Mod3-MHW-Importer"]
+    m3v=m3imp.bl_info.get('version', (-1, -1, -1))
+    # if m3v[0]>=1:npref='MOD3_'
+    # else:npref=''
+    type_resets=['CTC','MOD3_SkeletonRoot','CCL']
+    # for sc in bpy.data.scenes:
+        # scmhw=sc.mhwsake
+        # scmhw.type_resets=['CTC','%sSkeletonRoot'%npref,'CCL']
+        # print(scmhw.type_resets)
     # refresh_armor_numbers()
     # reload_settings()
     #print("WTF")
@@ -1161,6 +1173,7 @@ class UniExporter(Operator):
         if self.func=='CTC':
             row.prop(_set,'AlignFrames',text='Align All Frames',icon='META_ELLIPSOID')
             row.prop(_set,'AlignNodes',text='Realign All Nodes',icon='META_BALL')
+
 def register():
     #if post_load in bpy.app.handlers.load_post: return
     global custom_icons

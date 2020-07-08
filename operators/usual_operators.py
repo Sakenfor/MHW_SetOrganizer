@@ -94,10 +94,9 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
         for i in _set.ctc_copy_src:
             if i.source==source:
                 ctc_col=i
+    free_ids=[item for item in [x for x in range (150,251)] if item not in [a for a in arma_re]]
     if ctc_organizer.copy_ctc_bool:
         #_src=all_heir(source)
-        fmax=max(list(arma[a] for a in arma if arma[a]!=None))+1
-        
         text_prep,text_new=mhw.header_copy_name,mhw.header_new_names
         _obs=bpy.data.objects
         count_types={'Bone':1,'Header':1,'Frame':1,'Chain':1,'Node':1}
@@ -121,18 +120,14 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
                 nodebone=pco.target
                 total_list.insert(0,nodebone)
                 if nodebone.parent!=None and nodebone.parent not in total_list:total_list.insert(0,nodebone.parent)
-                
-                list_max_id2.append(nodebone['boneFunction'])
             if header_tar==None and o.get('Type')=='CTC':
                 header_tar=o.copy()
                 scene.objects.link(header_tar)
                 
-        max_id2=max(list_max_id2) if list_max_id2!=[] else 0
         order=total_list[:]
         total_list=sorted(list(set(total_list)),key=lambda x:order.index(x))
         #remove doubles,preserve sort order, crucial else parenting is messed, is a current flaw ^
-        if max_id2>fmax:fmax=max_id2+1
-        elif max_id2==fmax:fmax=fmax+1
+
     for xx in _set.ctc_copy_src:
         if xx.target!=target:continue
         for a in xx.copy_src_track:
@@ -143,7 +138,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
 
     pairs,frame_props,to_parent,pairs2={},{},{},{}
     li=bpy.data.libraries.data.objects
-    
+    print('Free IDs:\n',free_ids)
     if ctc_organizer.copy_ctc_bool:
         for isr,o in enumerate(total_list):
             if o==None:continue
@@ -233,9 +228,10 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
                         if o2track.changed_id==0:
                             #o_id=fmax
                             o2track.changed_id=o_id
-                            self.report({'INFO'},'Shifted boneFunction %s to %s (%s)'%(o['boneFunction'],fmax,o2.name))
-                            o2track.bone_id=fmax
-                            fmax+=1
+                            self.report({'INFO'},'Shifted boneFunction %s to %s (%s)'%(o['boneFunction'],free_ids[0],o2.name))
+                            o2track.bone_id=free_ids[0]
+                            free_ids.remove(free_ids[0])
+
             
             elif o2track.changed_id==0 and o_id!=None:o2track.bone_id=o_id
             if tty=='Bone' and mirror and o2track.o2!=None:
@@ -284,7 +280,11 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
                 if i.bone_id>=150:
                     self.report({'WARNING'},'Could not find parent of %s!'%o2.name)
             #o2.matrix_world=Matrix()
-            copy_various_props(o,o2)
+            if ctc_organizer.copy_props:
+                copy_various_props(o,o2)
+            o2.empty_draw_type = o.empty_draw_type
+            o2.empty_draw_size = o.empty_draw_size
+            o2.show_axis = o.show_axis
             #scene.update()
             
             if i.ttype=='Bone':
@@ -315,6 +315,7 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
     modif_state_save,ob_state_save={},{} #TODO, choose to use modifiers or not
     total_bones.update(new_bonedict)
     if ctc_organizer.transfer_weights :
+        trf_count={}
         for ttag in tag_dict:
             tag=tag_dict[ttag]
             if tag['Target']==[] or tag['Source']==[]:continue
@@ -364,8 +365,11 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
                             for _o in tag['Target']:#valid_obs:
                                 o=_o.obje
                                 #reeport(self,v1=o.obje.vertex_groups.get(w.name),v2=bpy.data.objects[w.name]['boneFunction']>=150,ob=o.obje.name)
-                                if o.vertex_groups.get(w.name) and wgRangeLambda(bpy.data.objects[w.name]):
-                                    o.vertex_groups.remove(group=o.vertex_groups[w.name])
+                                if trf_count.get(o)==None:trf_count[o]=0
+                                if trf_count[o]==0:
+                                    if o.vertex_groups.get(w.name) and wgRangeLambda(bpy.data.objects[w.name]):
+                                        o.vertex_groups.remove(group=o.vertex_groups[w.name])
+                                trf_count[o]+=1
                     else:
                         oco.vertex_groups.remove(w)
                         continue
@@ -408,9 +412,8 @@ def CopyCTC(self,context,copy_from,source,src_heir,ctc_organizer,source_set,tag_
                 if remvg!=[]:self.report({'INFO'},"Object %s, removed unused groups: %s"%(t.obje.name,', '.join(a for a in remvg)))
             
         
-        for t in tag['Target']:
-
-            weight_clean(self,context,ctc_organizer,t.obje)
+        for t in trf_count:
+            weight_clean(self,context,ctc_organizer,t)
 
         for m in modif_state_save:m.show_viewport=modif_state_save[m]
         for i in ob_state_save:i.hide,i.hide_select=ob_state_save[i]
@@ -513,6 +516,7 @@ class CopyObjectChangeVG(Operator):
     partial_mat=StringProperty()
     replace_mesh_only=BoolProperty()
     copy_props_too=BoolProperty(description='The Mesh Custom Properties')
+    add_to_set=BoolProperty(default=1)
     
     @classmethod
     def poll(cls, context):
@@ -604,6 +608,11 @@ class CopyObjectChangeVG(Operator):
         if not self.replace_mesh_only:
             onew.name='copy_%s'%onew.name if self.copy_name=='' else self.copy_name
             onew.data.name=onew.name
+            if self.add_to_set:
+                nob=_set.eobjs.add()
+                nob.obje=onew
+                nob.normals_source=source
+                
             self.report({'INFO'},'Sucesfully made a copy of %s as %s.'%(source.name,onew.name))
         else:
             
@@ -654,6 +663,8 @@ class CopyObjectChangeVG(Operator):
         row=self.layout
         row.prop(self,'remove_not_found',icon='CANCEL',text='Remove Bone-Not Found Grps')
         row=self.layout
+        row.prop(self,'add_to_set',icon='ROTATECENTER',text='Add to Set after Copying')
+        row=self.layout
         row.label('partial mesh, by VG or Mat')
         row=self.layout 
         row.prop_search(self,'partial_vg',source,'vertex_groups',text='Copy part of mesh by vertex group')
@@ -672,8 +683,8 @@ class MHW_ImportManager(Operator):
     var1=StringProperty()
     ext=StringProperty()
     all_options=['clear_scene','maximize_clipping','high_lod','import_header',
-        'import_meshparts','import_unknown_mesh_props','import_textures','import_materials',
-        'texture_path','import_skeleton','weight_format','override_defaults']
+        'import_meshparts','import_textures','import_materials','load_group_functions',
+        'texture_path','import_skeleton','weight_format']
     extd={'MOD3':'.mod3','CCL':'.ccl','CTC':'.ctc'}
     
     @classmethod
@@ -701,13 +712,12 @@ class MHW_ImportManager(Operator):
             high_lod=_set.high_lod,
             import_header=_set.import_header,
             import_meshparts=_set.import_meshparts,
-            import_unknown_mesh_props=_set.import_unknown_mesh_props,
             import_textures=_set.import_textures,
             import_materials=_set.import_materials,
+            load_group_functions=_set.load_group_functions,
             texture_path=_set.texture_path,
             import_skeleton=_set.import_skeleton,
             weight_format=_set.weight_format,
-            override_defaults=_set.override_defaults,
             
             )
         elif ext=='.ctc':
@@ -756,24 +766,33 @@ class safeRemoveDoubles(Operator):
     
     pres_methods=[['Normals Split','Use the split normals modifier','MOD_NORMALEDIT'],
     ['Normals Transfer','Use the transfer normals modifier','OBJECT_DATA']]
-    tar_ob=StringProperty()
+    set_tar_ob=StringProperty()
     pres_method=EnumProperty(default='Normals Transfer',items=[(a[0],a[0],a[1],a[2],x) for x,a in enumerate(pres_methods)])
-    
+    col_ob=StringProperty()
     @classmethod
     def poll(cls, context):
         return True
         
     def execute(self, context):
-        if bpy.data.objects.get(self.tar_ob)!=None:
-            scene=context.scene
-            oob=bpy.data.objects[self.tar_ob]
+        scene=context.scene
+        self.tar_ob=False
+        self.ob_col=False
+        if self.col_ob!='':
+            self.ob_col=eval(self.col_ob)
+            self.tar_ob=self.ob_col.obje
+        elif self.set_tar_ob!='':
+            self.tar_ob=bpy.data.objects.get(self.set_tar_ob)
+        if self.tar_ob:
+            oob=self.tar_ob
             mosave={m:m.show_viewport for m in oob.modifiers if m.type !='SUBSURF'}
             for m in mosave:m.show_viewport=False
             selsave=context.selected_objects
             aktsave=context.active_object
             
-
-            me2=oob.data.copy()
+            if self.ob_col and self.ob_col.normals_source!=None:
+                me2= self.ob_col.normals_source.data.copy()
+            else:
+                me2=oob.data.copy()
             o2=new_ob(scene,'temporary_copydp',me2)
             bpy.ops.object.select_all(action='DESELECT')
             #stuff
@@ -783,7 +802,6 @@ class safeRemoveDoubles(Operator):
             oob.hide=0
             oob.hide_select=0
 
-            
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.reveal()
@@ -793,20 +811,7 @@ class safeRemoveDoubles(Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
             
             scene.update()
-            mname='dpmhw_normals_pres'
-            if self.pres_method=='Normals Split':
-                m=oob.modifiers.new(mname,"NORMAL_EDIT")
-                m.target=o2
-                m.mode='DIRECTIONAL'
-                m.use_direction_parallel=1
-            elif self.pres_method=='Normals Transfer':
-                m = oob.modifiers.new(mname,"DATA_TRANSFER")
-                m.use_loop_data = True
-                m.loop_mapping = "NEAREST_POLYNOR"
-                m.data_types_loops = {'CUSTOM_NORMAL'}
-                m.object = o2
-            bpy.ops.object.modifier_apply(apply_as='DATA', modifier=mname)
-            
+            transfer_normals(o2,oob,method=self.pres_method)
             #end
             for o in selsave:o.select=1
             context.scene.objects.active=aktsave
@@ -814,6 +819,7 @@ class safeRemoveDoubles(Operator):
             oob.hide,oob.hide_select=osave
             for m in mosave:m.show_viewport=mosave[m]
             scene.update()
+        self.col_ob=''
         return {'FINISHED'}
     def invoke(self, context, event):
         if event.shift:
@@ -969,20 +975,21 @@ class emptyVGrenamer(Operator):
         if obj_pool==[]:return {'FINISHED'}
         
         arma_dic={bo.get('boneFunction'):bo for bo in arma.pose.bones} if arma!=None else {}
-        root=rootfind(self,obj_pool[0])
-        empties=all_heir(root)
+        #root=rootfind(self,obj_pool[0])
+        #empties=all_heir(root)
+        empties=all_heir(_set.empty_root)
         emp_dic={em.get('boneFunction'):em for em in empties}
         ext_fix={'_L':'.L','_R':'.R'}
         b_locs,pairs={},{}
         nameadd=self.uni_name if self.uni_name!='' else ''.join(random.choice(chrs) for _ in range(6))
         nameadd+='_'
-        
+        old_map={}
         for e in empties:
             if not e.get('boneFunction'):continue
             bf=e['boneFunction']
             bm=e.matrix_world.to_translation()
             b_locs[e]=[bm,Vector([-bm[0],bm[1],bm[2]])]
-        for e in empties:
+        for enu,e in enumerate(empties):
             if e.get('boneFunction')==None:continue
             bf=e['boneFunction']
             bone=arma_dic[bf] if arma_dic.get(bf)!=None else False
@@ -999,14 +1006,17 @@ class emptyVGrenamer(Operator):
             mirror=find_mirror(e,b_locs)
             obn='%s%s'%(nameadd,bf)
             if mirror:
-                if pairs.get(mirror+bf):obn=pairs[mirror+bf]
+                mfix=[mirror,bf]
+                mfix.sort()
+                mkey='%s_%s'%(mfix[0],mfix[1])
+                if pairs.get(mkey):obn=pairs[mkey]
                 else:
-                    obn='%s%s'%(nameadd,mirror+bf)
-                    pairs[mirror+bf]=obn
+                    obn='%s%s'%(nameadd,mkey)
+                    pairs[mkey]=obn
             if bone:
                 obn=nameadd+bone.name
                 if ext!='':
-                    obn=obn[:2] if obn.count(ext)>1 else obn.replace(ext,'')
+                    obn=obn[:-2] if obn.count(ext)>1 else obn.replace(ext,'')
 
             if ext_fix.get(ext):ext=ext_fix[ext]
             obn=obn+ext
@@ -1017,9 +1027,16 @@ class emptyVGrenamer(Operator):
             for ss in obj_pool:
                 if ss.vertex_groups.get(e.name):
                     ss.vertex_groups[e.name].name=obn
+            old_map[e.name]=obn
             e.name=obn
+        #Hook modifiers 'fix' after bone/vg rename
+        for o in obj_pool:
+            for mo in [m for m in o.modifiers if m.type=='HOOK']:
+                mvg=mo.vertex_group
+                if old_map.get(mvg):mo.vertex_group=old_map[mvg]
         self.report({'INFO'},'Succesfully renamed vg/empties in: %s'%[a.name for a in obj_pool])
         return {'FINISHED'}
+    
     def invoke(self, context, event):
         if context.active_object!=None:
             self.tar_ob=context.active_object.name
@@ -1265,6 +1282,8 @@ class CopyCTCops(Operator):
         row=layout.row()
         row.label("Weights, CTC-Chains Copy, or Both:")
         row=layout.row()
+        row.prop(_org,'copy_props',icon='MOD_BOOLEAN')
+        row=layout.row()
         row.prop(_org,'transfer_weights',icon='MOD_VERTEX_WEIGHT',text='Transfer Weights')
         row.prop(_org,'copy_ctc_bool',icon='ROTATECENTER',text='Copy CTC')
         help1=row.operator("scene.dpmhw_button", icon='QUESTION', text="")
@@ -1430,13 +1449,34 @@ class WeightTransferAssigner(Operator):
         row.prop(self,'deselect_after',icon='BORDER_LASSO',text='Deselect All Verts After')
         pass
 
-
+class BatchNormalsTransfer(Operator): 
+    """Batch transfer normals in sets' objects, if they have assigned 'Normals Source'"""
+    bl_idname = "dpmhw.batch_nrm_trsf"
+    bl_label = "Batch Normals Transfer"
+    bl_options = {"REGISTER", "UNDO"} 
+    
+    ocol=StringProperty()
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+    def execute(self, context):
+        scene=context.scene
+        ocol=eval(self.ocol)
+        for o in get_valid_obs(ocol):
+            if o.normals_source!=None:
+                transfer_normals(o.normals_source,o.obje,"Normals Transfer")
+        return {"FINISHED"}
+    def invoke(self, context, event):
+        
+        return self.execute(context)
+        
 cls=[SimpleConfirmOperator,CopyObjectChangeVG ,
 SolveRepeatedUVs,safeRemoveDoubles,
 MHW_ImportManager,emptyVGrenamer,
 updateUsersOfCTC,SetObjectsToggler,
 SaketargetArmature,SaketargetEmpties,CopyCTCops,
-BoneMirrorer,WeightTransferAssigner,
+BoneMirrorer,WeightTransferAssigner,BatchNormalsTransfer,
 
 ]
 def register():
@@ -1446,5 +1486,5 @@ def register():
 def unregister():
     for cl in cls:
         bpy.utils.unregister_class(cl)
-if __name__ == "operators.usual_operators":
+if __name__ == "operators.usual_operators" or __name__ == "usual_operators":
     register()

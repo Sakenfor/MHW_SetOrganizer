@@ -16,6 +16,31 @@ def ObjProp(var,obj,val,descr,max=10.0,min=0.0):
           "is_overridable_library":0,
           }
 
+def transfer_normals(source,target,method):
+    mname='dpmhw_normals_pres'
+    if method=='Normals Split':
+        m=target.modifiers.new(mname,"NORMAL_EDIT")
+        m.target=source
+        m.mode='DIRECTIONAL'
+        m.use_direction_parallel=1
+    elif method=='Normals Transfer':
+        m = target.modifiers.new(mname,"DATA_TRANSFER")
+        m.use_loop_data = True
+        m.loop_mapping = "NEAREST_POLYNOR"
+        m.data_types_loops = {'CUSTOM_NORMAL'}
+        m.object = source
+    else:
+        return
+    bpy.ops.object.select_all(action='DESELECT')
+    target.select=1
+    bpy.context.scene.objects.active=target
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.datalayout_transfer(modifier=mname)
+    bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mname)
+
+def get_valid_obs(set):
+    return [a for a in set.eobjs if a.obje!=None and a.obje.name in bpy.context.scene.objects]
+
 def o_tri(self,scene,object):
             mesh_tri=object.data.copy()
             bm = bmesh.new()
@@ -180,14 +205,18 @@ def weight_clean(self,context,orga,object):
         limit=int(findall(r'(?<=IASkin).(?=wt)',ldata)[0])
         try:
             bpy.ops.object.vertex_group_limit_total(limit=limit)
-            if limit==4: #Not fully sure if this can cause issues
-                object.data['unkn']=19
-                object.data['unkn2']=33
-                object.data['unkn3']=-61
-            elif limit==8:
-                object.data['unkn']=19
-                object.data['unkn2']=41
-                object.data['unkn3']=-61
+            # if limit==4: 
+                # object.data['unknownIndex']=2
+                # object.data['unkn3']=195
+                # object.data['unkn']=19
+                # object.data['unkn2']=33
+                # object.data['unkn3']=-61
+            # elif limit==8:
+                # object.data['unknownIndex']=1
+                # object.data['unkn3']=195
+                # object.data['unkn']=19
+                # object.data['unkn2']=41
+                # object.data['unkn3']=-61
         except:
             self.report({'WARNING'},'Could not limit the weights of %s'%object.name)
             pass
@@ -256,10 +285,11 @@ def fix_ctc_ids(self,context,col):
     ctc_heir=all_heir(ctc)
     arma_re={ob.get('boneFunction'):ob for ob in arma_heir}
     #print(ctc_heir)
+    double_ids={}
     for no in ctc_heir:
         
         if no.get('Type')and no['Type']=='CTC_*_Frame':
-            
+            nodnum=False
             thenode=no.parent
             kons=thenode.constraints['Bone Function']
             if  kons.target==None:
@@ -269,11 +299,19 @@ def fix_ctc_ids(self,context,col):
                     kons.target=node_bone
                     kons.inverse_matrix = thenode.parent.matrix_world.inverted()
             else:
-                if kons.target.get('boneFunction'):
-                    nodnum=kons.target['boneFunction']
+                nodnum=kons.target.get('boneFunction')
+                if nodnum:
                     no['boneFunctionID']=nodnum
+
                 else:
                     self.report({'WARNING'},'Could not find bone function in %s'%kons.target.name)
+            if nodnum:
+                if double_ids.get(nodnum)==None:double_ids[nodnum]=1
+                else:print('Double Function ID %s, %s'%(nodnum,no.name))
+    for no in [a for a in ctc_heir if a.get('Type')=='CTC_Node']:
+        ko=no.constraints.get('Bone Function')
+        if ko and ko.target==None:
+            bpy.data.objects.remove(no)
     scene.update()
 
 def update_sides(self,context,col):
