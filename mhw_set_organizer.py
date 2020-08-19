@@ -20,7 +20,7 @@ from mathutils import Matrix,Vector
 json_savepath=base_dir+'\\MhwSettings.json'
 
 armor_parts_enum=['leg','wst','arm','body','helm']
-
+custom_icons={}
 def ico(name):
        #global custom_icons
        return custom_icons.get(name).icon_id
@@ -576,7 +576,6 @@ class dpMHW_panel(bpy.types.Panel):
     bl_category = "MHW Tools"
 
     def draw(self,context):
-        global custom_icons
         context = bpy.context
         scene=context.scene
         mhw=bpy.context.scene.mhwsake
@@ -1075,18 +1074,19 @@ class dpmhwButton(Operator):
     func=StringProperty()
     var1=StringProperty()
     confirmer=BoolProperty(default=0)
-    sevent=PointerProperty(type=bpy.types.Event)
+    #sevent=PointerProperty(type=bpy.types.Event)
     #o2track=PointerProperty(type=ob_copy_track)
+    
     @classmethod
     def poll(cls, context):
         return True
 
     def invoke(self, context, event):
-        self.sevent=event
+
         if self.confirmer==1:
             return context.window_manager.invoke_confirm(self, event) 
         else:
-            return self.execute(context)
+            return self.execute(event)
     @classmethod
     def update_vg_names(self,col):
                 for w in col.VG:
@@ -1097,7 +1097,8 @@ class dpmhwButton(Operator):
 
         
         
-    def execute(self,context):
+    def execute(self,sevent):
+        context=bpy.context
         scene=context.scene
         #wiz=scene.Bwiz
         if self.func=='Save Settings':SaveSettings(context)
@@ -1176,20 +1177,26 @@ class UniExporter(Operator):
 
 def register():
     #if post_load in bpy.app.handlers.load_post: return
-    global custom_icons
-
+    global custom_icons#,custom_iconss
+    import bpy.utils.previews
+    custom_icons = bpy.utils.previews.new()
+    
     bpy.utils.register_module(__name__)
     bpy.types.Scene.mhwsake = PointerProperty(type=dpMHW_help)
-    custom_icons = bpy.utils.previews.new()
+    
     for i in glob.glob(base_dir+'/icons/*.png'):
         custom_icons.load(i.split('\\')[-1][:-4] , i, 'IMAGE')
+        #print('mhw icon',i)
+    #print(custom_icons)
+    
 def unregister():
-    global custom_icons
+    #global custom_icons
     bpy.utils.unregister_module(__name__)
     del bpy.types.Scene.mhwsake
     #del bpy.types.Scene.mhwsetsz
     
-    for i in custom_icons.values():bpy.utils.previews.remove(i)
+    for i in custom_icons.values():
+        bpy.utils.previews.remove(i)
     custom_icons.clear()
 if __name__ == "mhw_set_organizer":
     register()

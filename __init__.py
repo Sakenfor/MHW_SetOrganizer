@@ -27,7 +27,7 @@ import mhw_set_organizer
 
 # importlib.reload(dpmhw_arrangers)
 # importlib.reload(usual_operators)
-importlib.reload(mhw_set_organizer)
+#importlib.reload(mhw_set_organizer)
 
 def register():
     pass
