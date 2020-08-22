@@ -1074,7 +1074,7 @@ class dpmhwButton(Operator):
     func=StringProperty()
     var1=StringProperty()
     confirmer=BoolProperty(default=0)
-    #sevent=PointerProperty(type=bpy.types.Event)
+    #sevent=PointerProperty(type=bpy.types.Event) #Gives a error
     #o2track=PointerProperty(type=ob_copy_track)
     
     @classmethod
@@ -1097,14 +1097,15 @@ class dpmhwButton(Operator):
 
         
         
-    def execute(self,sevent):
+    def execute(self,event):
+        
         context=bpy.context
         scene=context.scene
         #wiz=scene.Bwiz
         if self.func=='Save Settings':SaveSettings(context)
         elif self.func=='ApplySettingsToScenes':ApplySettingsToScenes(self.name,context)
-        elif self.func=='refresh_armor_numbers':refresh_settings(settings=0,event=self.sevent)
-        elif self.func=='reload_settings':refresh_settings(armor=0,event=self.sevent)
+        elif self.func=='refresh_armor_numbers':refresh_settings(settings=0,event=event)
+        elif self.func=='reload_settings':refresh_settings(armor=0,event=event)
         elif self.func=='goto_set_dir': #not implemented yet, go to directory
             goto_set_dir(context,self.var1)
         elif self.func=='show_info':
@@ -1116,7 +1117,7 @@ class dpmhwButton(Operator):
         elif self.func=='select_object':
             if bpy.data.objects.get(self.var1):
                 ob=bpy.data.objects[self.var1]
-                if not self.sevent.shift:bpy.ops.object.select_all(action='DESELECT')
+                if not event.shift:bpy.ops.object.select_all(action='DESELECT')
 
                 if ob.hide_select:ob.hide_select=0
                 if ob.hide:ob.hide=0
