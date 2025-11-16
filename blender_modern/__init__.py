@@ -18,7 +18,7 @@ bl_info = {
     "blender": addon_config.BLENDER_VERSION_MIN,
     "location": "View3D > MHW Tools",
     "description": "Easy export and organizing of MHW armor sets, objects, and CTC physics",
-    "warning": "Work in Progress - Properties only, operators/UI coming soon",
+    "warning": "Work in Progress - UI coming soon",
     "doc_url": "https://github.com/Sakenfor/MHW_SetOrganizer/wiki",
     "category": "Import-Export",
 }
@@ -37,12 +37,13 @@ def load_modules():
 
     # Import modules
     from . import properties
+    from . import operators
     from . import utils
-    # operators and ui will be added when implemented
+    # ui will be added when implemented
 
     _modules = [
         properties,
-        # operators,  # TODO: Implement
+        operators,
         # ui,         # TODO: Implement
     ]
 
@@ -87,7 +88,7 @@ def register():
         version_str = '.'.join(map(str, addon_config.ADDON_VERSION))
         print(f"✓ {addon_config.ADDON_NAME} v{version_str} registered successfully")
         print(f"  Properties: ✓ Complete")
-        print(f"  Operators: ⚠ TODO")
+        print(f"  Operators: ✓ Complete")
         print(f"  UI: ⚠ TODO")
 
     except Exception as e:

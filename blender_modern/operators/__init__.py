@@ -4,19 +4,33 @@ Operators module for MHW Set Organizer.
 Contains all operator classes for user actions.
 """
 
-# Import will be added as modules are created
-# from . import export_ops
-# from . import import_ops
-# from . import ctc_ops
-# from . import utility_ops
+import bpy
+
+# Import operator modules
+from . import export_ops
+from . import import_ops
+from . import ctc_ops
+from . import utility_ops
+
+# List of modules for registration
+_modules = [
+    export_ops,
+    import_ops,
+    ctc_ops,
+    utility_ops,
+]
+
 
 def register():
     """Register operator classes."""
-    # TODO: Register operators when created
-    pass
+    for module in _modules:
+        if hasattr(module, 'register'):
+            module.register()
 
 
 def unregister():
     """Unregister operator classes."""
-    # TODO: Unregister operators
-    pass
+    for module in reversed(_modules):
+        if hasattr(module, 'unregister'):
+            module.unregister()
+
