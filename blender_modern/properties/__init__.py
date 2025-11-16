@@ -6,90 +6,79 @@ Property groups are registered to store addon data in the Blender file.
 """
 
 import bpy
-from bpy.props import PointerProperty
+from bpy.props import PointerProperty, CollectionProperty
 
-from .export_set import (
-    MHW_PG_ExportSetObject,
-    MHW_PG_ExportSet,
-)
-from .ctc_properties import (
-    MHW_PG_CTCCopyTrack,
-    MHW_PG_CTCCopySource,
-    MHW_PG_CTCOrganizer,
-    MHW_PG_CTCChainEntry,
-    MHW_PG_CTCMaterialChoice,
-)
-from .settings import (
-    MHW_PG_Settings,
-    MHW_PG_ArmorEntry,
-    MHW_PG_BlendAppendPath,
-    MHW_PG_ExternalCTCSource,
-)
-from .batch_export import (
-    MHW_PG_SetOfSetsObject,
-    MHW_PG_SetOfSets,
-)
+# Import all property group modules
+from . import export_set
+from . import ctc_properties
+from . import batch_export
+from . import settings
 
-# List of all property group classes
-classes = (
-    # Export set properties
-    MHW_PG_ExportSetObject,
-    MHW_PG_ExportSet,
-
-    # CTC properties
-    MHW_PG_CTCCopyTrack,
-    MHW_PG_CTCCopySource,
-    MHW_PG_CTCOrganizer,
-    MHW_PG_CTCChainEntry,
-    MHW_PG_CTCMaterialChoice,
-
-    # Settings
-    MHW_PG_ArmorEntry,
-    MHW_PG_BlendAppendPath,
-    MHW_PG_ExternalCTCSource,
-    MHW_PG_Settings,
-
-    # Batch export
-    MHW_PG_SetOfSetsObject,
-    MHW_PG_SetOfSets,
-)
+# List of modules in registration order (dependencies first)
+_modules = [
+    export_set,
+    ctc_properties,
+    batch_export,
+    settings,
+]
 
 
 def register():
     """Register all property groups."""
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    # Register modules
+    for module in _modules:
+        if hasattr(module, 'register'):
+            module.register()
 
     # Register main settings property to Scene
+    # This must happen after all property groups are registered
+    # so forward references are resolved
     bpy.types.Scene.mhw_data = PointerProperty(
-        type=MHW_PG_Settings,
+        type=settings.MHW_PG_Settings,
         name="MHW Set Organizer Data",
         description="Monster Hunter World Set Organizer addon data"
+    )
+
+    # Resolve forward references in settings
+    # These couldn't be set directly due to circular dependencies
+    settings.MHW_PG_Settings.__annotations__['export_sets'] = CollectionProperty(
+        type=export_set.MHW_PG_ExportSet,
+        name="Export Sets"
+    )
+
+    settings.MHW_PG_Settings.__annotations__['batch_sets'] = CollectionProperty(
+        type=batch_export.MHW_PG_SetOfSets,
+        name="Batch Sets"
+    )
+
+    # Add CTC properties to export sets
+    export_set.MHW_PG_ExportSet.__annotations__['ctc_copy_sources'] = CollectionProperty(
+        type=ctc_properties.MHW_PG_CTCCopySource,
+        name="CTC Copy Sources"
+    )
+
+    export_set.MHW_PG_ExportSet.__annotations__['ctc_organizers'] = CollectionProperty(
+        type=ctc_properties.MHW_PG_CTCOrganizer,
+        name="CTC Organizers"
     )
 
 
 def unregister():
     """Unregister all property groups."""
     # Remove scene property
-    del bpy.types.Scene.mhw_data
+    if hasattr(bpy.types.Scene, 'mhw_data'):
+        del bpy.types.Scene.mhw_data
 
-    # Unregister classes in reverse order
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+    # Unregister modules in reverse order
+    for module in reversed(_modules):
+        if hasattr(module, 'unregister'):
+            module.unregister()
 
 
+# Export all classes for external use
 __all__ = [
-    'MHW_PG_ExportSetObject',
-    'MHW_PG_ExportSet',
-    'MHW_PG_CTCCopyTrack',
-    'MHW_PG_CTCCopySource',
-    'MHW_PG_CTCOrganizer',
-    'MHW_PG_CTCChainEntry',
-    'MHW_PG_CTCMaterialChoice',
-    'MHW_PG_Settings',
-    'MHW_PG_ArmorEntry',
-    'MHW_PG_BlendAppendPath',
-    'MHW_PG_ExternalCTCSource',
-    'MHW_PG_SetOfSetsObject',
-    'MHW_PG_SetOfSets',
+    'export_set',
+    'ctc_properties',
+    'batch_export',
+    'settings',
 ]

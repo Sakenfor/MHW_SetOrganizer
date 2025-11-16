@@ -8,7 +8,6 @@ Modernized for Blender 3.x/4.x with improved code quality and API compatibility.
 """
 
 import bpy
-from bpy.props import PointerProperty
 
 from . import addon_config
 
@@ -19,58 +18,82 @@ bl_info = {
     "blender": addon_config.BLENDER_VERSION_MIN,
     "location": "View3D > MHW Tools",
     "description": "Easy export and organizing of MHW armor sets, objects, and CTC physics",
-    "warning": "",
+    "warning": "Work in Progress - Properties only, operators/UI coming soon",
     "doc_url": "https://github.com/Sakenfor/MHW_SetOrganizer/wiki",
     "category": "Import-Export",
 }
 
-# Module imports - these will be imported when modules are created
-# Import order matters for registration
+# Module imports
 _modules = []
+_modules_loaded = False
 
-def register_modules():
-    """Import and register all addon modules."""
-    global _modules
 
-    # Import all modules
+def load_modules():
+    """Lazy load all addon modules."""
+    global _modules, _modules_loaded
+
+    if _modules_loaded:
+        return
+
+    # Import modules
     from . import properties
-    from . import operators
-    from . import ui
     from . import utils
+    # operators and ui will be added when implemented
 
     _modules = [
         properties,
-        operators,
-        ui,
+        # operators,  # TODO: Implement
+        # ui,         # TODO: Implement
     ]
 
-    # Register all modules
-    for module in _modules:
-        if hasattr(module, 'register'):
-            module.register()
-
-
-def unregister_modules():
-    """Unregister all addon modules."""
-    # Unregister in reverse order
-    for module in reversed(_modules):
-        if hasattr(module, 'unregister'):
-            module.unregister()
+    _modules_loaded = True
 
 
 def register():
     """Register addon classes and properties."""
     try:
-        register_modules()
+        # Load modules
+        load_modules()
 
-        # Register icons
-        from .ui import icons
-        icons.register()
+        # Register all modules
+        for module in _modules:
+            if hasattr(module, 'register'):
+                module.register()
 
-        print(f"✓ {addon_config.ADDON_NAME} v{'.'.join(map(str, addon_config.ADDON_VERSION))} registered successfully")
+        # Register icons (if UI module exists)
+        try:
+            from .ui import icons
+            icons.register()
+        except ImportError:
+            pass  # UI not implemented yet
+
+        # Initialize armor database
+        from .utils import file_utils
+        armor_data = file_utils.load_armor_database()
+
+        # Populate armor database in first scene
+        if len(bpy.data.scenes) > 0:
+            scene = bpy.data.scenes[0]
+            if hasattr(scene, 'mhw_data'):
+                mhw = scene.mhw_data
+
+                # Clear and populate armor database
+                mhw.armor_database.clear()
+                for armor_id, armor_name in armor_data.items():
+                    entry = mhw.armor_database.add()
+                    entry.armor_id = armor_id
+                    entry.name = f"{armor_name} ({armor_id})"
+
+        version_str = '.'.join(map(str, addon_config.ADDON_VERSION))
+        print(f"✓ {addon_config.ADDON_NAME} v{version_str} registered successfully")
+        print(f"  Properties: ✓ Complete")
+        print(f"  Operators: ⚠ TODO")
+        print(f"  UI: ⚠ TODO")
 
     except Exception as e:
         print(f"✗ Failed to register {addon_config.ADDON_NAME}: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 
@@ -78,15 +101,24 @@ def unregister():
     """Unregister addon classes and properties."""
     try:
         # Unregister icons
-        from .ui import icons
-        icons.unregister()
+        try:
+            from .ui import icons
+            icons.unregister()
+        except ImportError:
+            pass
 
-        unregister_modules()
+        # Unregister modules in reverse order
+        for module in reversed(_modules):
+            if hasattr(module, 'unregister'):
+                module.unregister()
 
-        print(f"✓ {addon_config.ADDON_NAME} unregistered")
+        version_str = '.'.join(map(str, addon_config.ADDON_VERSION))
+        print(f"✓ {addon_config.ADDON_NAME} v{version_str} unregistered")
 
     except Exception as e:
         print(f"✗ Failed to unregister {addon_config.ADDON_NAME}: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 
