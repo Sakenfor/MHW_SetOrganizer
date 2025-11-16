@@ -13,6 +13,7 @@ from . import export_set
 from . import ctc_properties
 from . import batch_export
 from . import export_history
+from . import export_presets
 from . import settings
 
 # List of modules in registration order (dependencies first)
@@ -21,6 +22,7 @@ _modules = [
     ctc_properties,
     batch_export,
     export_history,
+    export_presets,
     settings,
 ]
 
@@ -68,6 +70,12 @@ def register():
     settings.MHW_PG_Settings.__annotations__['export_history'] = CollectionProperty(
         type=export_history.MHW_PG_ExportHistoryEntry,
         name="Export History"
+    )
+
+    # Add export presets to settings
+    settings.MHW_PG_Settings.__annotations__['export_presets'] = CollectionProperty(
+        type=export_presets.MHW_PG_ExportPreset,
+        name="Export Presets"
     )
 
 

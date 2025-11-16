@@ -85,6 +85,10 @@ def register():
                     entry.armor_id = armor_id
                     entry.name = f"{armor_name} ({armor_id})"
 
+                # Initialize built-in export presets
+                from .properties import export_presets
+                export_presets.create_builtin_presets(mhw.export_presets)
+
         version_str = '.'.join(map(str, addon_config.ADDON_VERSION))
         print(f"✓ {addon_config.ADDON_NAME} v{version_str} registered successfully")
         print(f"  Properties: ✓ Complete")

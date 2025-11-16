@@ -213,6 +213,39 @@ class MHW_PT_MainPanel(Panel):
         op = row.operator('mhw.export', text='CCL', icon='META_CAPSULE')
         op.export_type = 'CCL'
 
+        # Export Presets
+        if mhw.export_presets:
+            box.separator()
+            row = box.row(align=True)
+            row.label(text="Preset:", icon='PRESET')
+
+            # Show current preset name
+            if mhw.active_preset_index < len(mhw.export_presets):
+                preset = mhw.export_presets[mhw.active_preset_index]
+                row.label(text=preset.name)
+            else:
+                row.label(text="None")
+
+            # Navigation buttons
+            col = row.column(align=True)
+            col.operator('mhw.preset_navigate', text="", icon='TRIA_LEFT').direction = 'PREV'
+            col.operator('mhw.preset_navigate', text="", icon='TRIA_RIGHT').direction = 'NEXT'
+
+            # Apply button
+            row.operator('mhw.preset_apply', text="Apply", icon='IMPORT')
+
+            # Save/Delete buttons
+            row = box.row(align=True)
+            row.operator('mhw.preset_save', text="Save Current", icon='ADD')
+            row.operator('mhw.preset_delete', text="Delete", icon='REMOVE')
+
+            # Show preset description if available
+            if mhw.active_preset_index < len(mhw.export_presets):
+                preset = mhw.export_presets[mhw.active_preset_index]
+                if preset.description:
+                    row = box.row()
+                    row.label(text=f"  {preset.description}", icon='INFO')
+
         # Validation button
         row = box.row()
         row.operator('mhw.validate_export_set', text='Validate Set', icon='CHECKMARK')

@@ -283,6 +283,18 @@ class MHW_PG_Settings(PropertyGroup):
         default=0
     )
 
+    # ===== Export Presets =====
+    export_presets: CollectionProperty(
+        type='MHW_PG_ExportPreset',  # Forward reference
+        name="Export Presets"
+    )
+
+    active_preset_index: IntProperty(
+        name="Active Preset Index",
+        description="Currently selected export preset",
+        default=0
+    )
+
 
 # Classes to register
 classes = (
