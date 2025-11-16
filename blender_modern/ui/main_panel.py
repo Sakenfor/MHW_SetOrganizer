@@ -342,9 +342,168 @@ class MHW_PT_MainPanel(Panel):
         col.operator('mhw.toggle_set_objects', icon='CHECKBOX_DEHLT', text="").enable = False
 
 
+class MHW_PT_BackupPanel(Panel):
+    """Backup settings panel for MHW Set Organizer."""
+    bl_label = "Auto Backup"
+    bl_idname = "MHW_PT_BackupPanel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "MHW Tools"
+    bl_parent_id = "MHW_PT_MainPanel"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw_header(self, context):
+        """Draw panel header with enable checkbox."""
+        layout = self.layout
+        mhw = context.scene.mhw_data
+        layout.prop(mhw, 'backup_enabled', text="")
+
+    def draw(self, context):
+        """Draw backup settings panel."""
+        layout = self.layout
+        scene = context.scene
+
+        if not hasattr(scene, 'mhw_data'):
+            layout.label(text="MHW Data not found", icon='ERROR')
+            return
+
+        mhw = scene.mhw_data
+
+        # Enable/disable based on backup_enabled
+        layout.enabled = mhw.backup_enabled
+
+        # Backup triggers
+        box = layout.box()
+        box.label(text="Auto-Backup Before:", icon='SYSTEM')
+        col = box.column(align=True)
+        col.prop(mhw, 'backup_before_batch', text="Batch Operations")
+        col.prop(mhw, 'backup_before_ctc', text="CTC Copy")
+        col.prop(mhw, 'backup_before_weights', text="Weight Transfer")
+
+        # Backup settings
+        box = layout.box()
+        box.label(text="Settings:", icon='PREFERENCES')
+        col = box.column(align=True)
+        col.prop(mhw, 'backup_max_count', text="Keep Backups")
+        col.prop(mhw, 'backup_directory', text="Directory")
+
+        # Manual backup operations
+        layout.separator()
+        row = layout.row(align=True)
+        row.operator('mhw.create_backup', text="Create Backup Now", icon='FILE_BACKUP')
+
+        row = layout.row(align=True)
+        row.operator('mhw.view_backups', text="View Backups", icon='FILE_FOLDER')
+        row.operator('mhw.cleanup_backups', text="Cleanup", icon='TRASH')
+
+        layout.operator('mhw.restore_backup', text="Restore from Backup", icon='LOOP_BACK')
+
+
+class MHW_PT_BatchOpsPanel(Panel):
+    """Batch operations panel for MHW Set Organizer."""
+    bl_label = "Batch Operations"
+    bl_idname = "MHW_PT_BatchOpsPanel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "MHW Tools"
+    bl_parent_id = "MHW_PT_MainPanel"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        """Draw batch operations panel."""
+        layout = self.layout
+
+        # Batch Rename
+        box = layout.box()
+        box.label(text="Batch Rename:", icon='SORTALPHA')
+        box.operator('mhw.batch_rename', text="Rename Objects", icon='GREASEPENCIL')
+
+        # Batch Material
+        box = layout.box()
+        box.label(text="Batch Material:", icon='MATERIAL')
+        box.operator('mhw.batch_material', text="Apply Material", icon='BRUSH_DATA')
+
+        # Batch Modifiers
+        box = layout.box()
+        box.label(text="Batch Modifiers:", icon='MODIFIER')
+        box.operator('mhw.batch_modifiers', text="Process Modifiers", icon='MODIFIER_ON')
+
+        # Batch UV
+        box = layout.box()
+        box.label(text="Batch UV:", icon='UV')
+        box.operator('mhw.batch_uv', text="Process UVs", icon='UV_DATA')
+
+
+class MHW_PT_SymmetryPanel(Panel):
+    """Symmetry operations panel for MHW Set Organizer."""
+    bl_label = "Symmetry Tools"
+    bl_idname = "MHW_PT_SymmetryPanel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "MHW Tools"
+    bl_parent_id = "MHW_PT_MainPanel"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        """Draw symmetry operations panel."""
+        layout = self.layout
+
+        # Mirror Export Set
+        box = layout.box()
+        box.label(text="Mirror Entire Set:", icon='MOD_MIRROR')
+        box.operator('mhw.mirror_export_set', text="Mirror L→R", icon='FORWARD').direction = 'L_TO_R'
+        box.operator('mhw.mirror_export_set', text="Mirror R→L", icon='BACK').direction = 'R_TO_L'
+
+        # Mirror Materials Only
+        box = layout.box()
+        box.label(text="Mirror Materials:", icon='MATERIAL')
+        box.operator('mhw.mirror_materials', text="Swap L/R Materials", icon='ARROW_LEFTRIGHT')
+
+        # Symmetrize
+        box = layout.box()
+        box.label(text="Symmetrize:", icon='MOD_MIRROR')
+        box.operator('mhw.symmetrize_set', text="Symmetrize Set", icon='MOD_MIRROR')
+
+        # Check Symmetry
+        box = layout.box()
+        box.label(text="Validation:", icon='CHECKMARK')
+        box.operator('mhw.check_symmetry', text="Check Symmetry", icon='VIEWZOOM')
+
+
+class MHW_PT_TemplatesPanel(Panel):
+    """Project templates panel for MHW Set Organizer."""
+    bl_label = "Project Templates"
+    bl_idname = "MHW_PT_TemplatesPanel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "MHW Tools"
+    bl_parent_id = "MHW_PT_MainPanel"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        """Draw templates panel."""
+        layout = self.layout
+
+        # New from Template
+        box = layout.box()
+        box.label(text="New Project:", icon='FILE_NEW')
+        box.operator('mhw.new_from_template', text="Create from Template", icon='PLUS')
+
+        # Save/Load Custom Templates
+        box = layout.box()
+        box.label(text="Custom Templates:", icon='DOCUMENTS')
+        row = box.row(align=True)
+        row.operator('mhw.save_as_template', text="Save", icon='EXPORT')
+        row.operator('mhw.load_template', text="Load", icon='IMPORT')
+
+
 # List of panel classes for registration
 classes = [
     MHW_PT_MainPanel,
+    MHW_PT_BackupPanel,
+    MHW_PT_BatchOpsPanel,
+    MHW_PT_SymmetryPanel,
+    MHW_PT_TemplatesPanel,
 ]
 
 

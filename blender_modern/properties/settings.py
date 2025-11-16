@@ -295,6 +295,46 @@ class MHW_PG_Settings(PropertyGroup):
         default=0
     )
 
+    # ===== Auto Backup Settings =====
+    backup_enabled: BoolProperty(
+        name="Enable Auto-Backup",
+        description="Automatically create backups before risky operations",
+        default=True
+    )
+
+    backup_before_batch: BoolProperty(
+        name="Backup Before Batch Operations",
+        description="Create backup before batch operations",
+        default=True
+    )
+
+    backup_before_ctc: BoolProperty(
+        name="Backup Before CTC Copy",
+        description="Create backup before CTC copy operations",
+        default=True
+    )
+
+    backup_before_weights: BoolProperty(
+        name="Backup Before Weight Transfer",
+        description="Create backup before weight transfer operations",
+        default=True
+    )
+
+    backup_max_count: IntProperty(
+        name="Maximum Backups",
+        description="Maximum number of backups to keep (older ones will be deleted)",
+        default=5,
+        min=1,
+        max=50
+    )
+
+    backup_directory: StringProperty(
+        name="Backup Directory",
+        description="Directory to store backups (leave empty for default: project_folder/backups)",
+        default="",
+        subtype='DIR_PATH'
+    )
+
 
 # Classes to register
 classes = (

@@ -16,6 +16,11 @@ from . import validation_ops
 from . import collection_ops
 from . import visual_feedback
 from . import preset_ops
+from . import pie_menu
+from . import backup_ops
+from . import batch_ops
+from . import symmetry_ops
+from . import template_ops
 
 # List of modules for registration
 _modules = [
@@ -28,6 +33,11 @@ _modules = [
     collection_ops,
     visual_feedback,
     preset_ops,
+    pie_menu,
+    backup_ops,
+    batch_ops,
+    symmetry_ops,
+    template_ops,
 ]
 
 
