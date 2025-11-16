@@ -12,6 +12,7 @@ from bpy.props import PointerProperty, CollectionProperty
 from . import export_set
 from . import ctc_properties
 from . import batch_export
+from . import export_history
 from . import settings
 
 # List of modules in registration order (dependencies first)
@@ -19,6 +20,7 @@ _modules = [
     export_set,
     ctc_properties,
     batch_export,
+    export_history,
     settings,
 ]
 
@@ -62,6 +64,12 @@ def register():
         name="CTC Organizers"
     )
 
+    # Add export history to settings
+    settings.MHW_PG_Settings.__annotations__['export_history'] = CollectionProperty(
+        type=export_history.MHW_PG_ExportHistoryEntry,
+        name="Export History"
+    )
+
 
 def unregister():
     """Unregister all property groups."""
@@ -80,5 +88,6 @@ __all__ = [
     'export_set',
     'ctc_properties',
     'batch_export',
+    'export_history',
     'settings',
 ]

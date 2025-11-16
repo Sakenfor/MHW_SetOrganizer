@@ -271,6 +271,18 @@ class MHW_PG_Settings(PropertyGroup):
         poll=poll_armature
     )
 
+    # ===== Export History =====
+    export_history: CollectionProperty(
+        type='MHW_PG_ExportHistoryEntry',  # Forward reference
+        name="Export History"
+    )
+
+    active_history_index: IntProperty(
+        name="Active History Index",
+        description="Currently selected history entry",
+        default=0
+    )
+
 
 # Classes to register
 classes = (

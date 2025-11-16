@@ -10,6 +10,7 @@ from bpy.types import Operator
 from bpy.props import StringProperty, BoolProperty
 
 from ..core import export_logic
+from ..properties import export_history
 from ..utils import validation
 
 
@@ -118,11 +119,35 @@ class MHW_OT_Export(Operator):
             traceback.print_exc()
             return {'CANCELLED'}
 
-        # Report result
+        # Report result and log to history
         if success:
+            # Log successful export to history
+            export_history.add_export_history_entry(
+                context,
+                export_set_name=export_set.name,
+                export_type=self.export_type,
+                file_path=export_set.export_path,
+                success=True,
+                split_normals=export_set.split_normals,
+                highest_lod=export_set.highest_lod,
+                coerce_fourth=export_set.coerce_fourth if self.export_type == 'MOD3' else False,
+                align_frames=self.align_frames if self.export_type == 'CTC' else False,
+                align_nodes=self.align_nodes if self.export_type == 'CTC' else False
+            )
+
             self.report({'INFO'}, message)
             return {'FINISHED'}
         else:
+            # Log failed export to history
+            export_history.add_export_history_entry(
+                context,
+                export_set_name=export_set.name,
+                export_type=self.export_type,
+                file_path=export_set.export_path,
+                success=False,
+                error_message=message
+            )
+
             self.report({'ERROR'}, message)
             return {'CANCELLED'}
 

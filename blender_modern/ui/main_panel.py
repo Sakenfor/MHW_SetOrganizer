@@ -272,6 +272,16 @@ class MHW_PT_MainPanel(Panel):
         row.operator('mhw.create_export_set_collection', text='Create Collection', icon='OUTLINER_COLLECTION')
         row.operator('mhw.sync_collection_to_set', text='Sync from Collection', icon='FILE_REFRESH')
 
+        # Visual feedback
+        row = box.row(align=True)
+        row.operator('mhw.highlight_export_set_objects', text='Highlight Set', icon='OUTLINER_OB_LIGHT')
+        row.operator('mhw.isolate_export_set', text='Isolate', icon='RESTRICT_VIEW_OFF')
+
+        row = box.row(align=True)
+        row.operator('mhw.toggle_wireframe', text='Toggle Wireframe', icon='SHADING_WIRE')
+        op = row.operator('mhw.isolate_export_set', text='Un-Isolate', icon='RESTRICT_VIEW_ON')
+        op.restore = True
+
         # Objects in set
         box = layout.box()
         box.label(text="Objects in Set:", icon='MESH_CUBE')

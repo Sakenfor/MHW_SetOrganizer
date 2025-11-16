@@ -14,6 +14,7 @@ from . import utility_ops
 from . import quick_actions
 from . import validation_ops
 from . import collection_ops
+from . import visual_feedback
 
 # List of modules for registration
 _modules = [
@@ -24,6 +25,7 @@ _modules = [
     quick_actions,
     validation_ops,
     collection_ops,
+    visual_feedback,
 ]
 
 
