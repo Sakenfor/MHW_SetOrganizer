@@ -56,6 +56,11 @@ class MHW_PT_MainPanel(Panel):
         row.operator('mhw.save_settings', text='Save Settings', icon='FILE_TICK')
         row.operator('mhw.load_settings', text='Load Settings', icon='FILE_REFRESH')
 
+        # Collection organization
+        row = box.row()
+        row.operator('mhw.create_all_collections', text='Create All Collections', icon='OUTLINER_COLLECTION')
+        row.operator('mhw.organize_collections', text='Organize', icon='FILE_FOLDER')
+
     def draw_ctc_copier(self, layout, context, mhw):
         """Draw CTC header copier section."""
         box = layout.box()
@@ -138,8 +143,10 @@ class MHW_PT_MainPanel(Panel):
             row.prop(batch_set, 'export_ctc', text='CTC', icon='MOD_SIMPLEDEFORM')
             row.prop(batch_set, 'export_ccl', text='CCL', icon='META_CAPSULE')
 
-            # Batch export button
-            box.operator('mhw.batch_export', text=f'Batch Export: {batch_set.name}', icon='EXPORT')
+            # Batch export buttons
+            row = box.row(align=True)
+            row.operator('mhw.batch_export', text=f'Batch Export: {batch_set.name}', icon='EXPORT')
+            row.operator('mhw.validate_batch_set', text='Validate', icon='CHECKMARK')
 
             # Sets in batch list
             box.label(text="Sets in Batch:", icon='OUTLINER_OB_GROUP_INSTANCE')
@@ -206,6 +213,10 @@ class MHW_PT_MainPanel(Panel):
         op = row.operator('mhw.export', text='CCL', icon='META_CAPSULE')
         op.export_type = 'CCL'
 
+        # Validation button
+        row = box.row()
+        row.operator('mhw.validate_export_set', text='Validate Set', icon='CHECKMARK')
+
         if export_set.export_path:
             row = box.row()
             row.label(text=export_set.export_path, icon='FILE_FOLDER')
@@ -255,6 +266,11 @@ class MHW_PT_MainPanel(Panel):
         row = box.row(align=True)
         row.operator('mhw.rename_bones_and_vg', text='Rename Bones/VG', icon='SORTALPHA')
         row.operator('mhw.update_ctc_users', text='Update CTC', icon='FILE_REFRESH')
+
+        # Collection management
+        row = box.row(align=True)
+        row.operator('mhw.create_export_set_collection', text='Create Collection', icon='OUTLINER_COLLECTION')
+        row.operator('mhw.sync_collection_to_set', text='Sync from Collection', icon='FILE_REFRESH')
 
         # Objects in set
         box = layout.box()

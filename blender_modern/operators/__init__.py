@@ -11,6 +11,9 @@ from . import export_ops
 from . import import_ops
 from . import ctc_ops
 from . import utility_ops
+from . import quick_actions
+from . import validation_ops
+from . import collection_ops
 
 # List of modules for registration
 _modules = [
@@ -18,6 +21,9 @@ _modules = [
     import_ops,
     ctc_ops,
     utility_ops,
+    quick_actions,
+    validation_ops,
+    collection_ops,
 ]
 
 
