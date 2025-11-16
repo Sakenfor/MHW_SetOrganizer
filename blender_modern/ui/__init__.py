@@ -4,18 +4,31 @@ UI module for MHW Set Organizer.
 Contains panels, lists, and icon management for the addon UI.
 """
 
-# Import will be added as modules are created
-# from . import icons
-# from . import main_panel
-# from . import ui_lists
+import bpy
+
+# Import UI modules
+from . import ui_lists
+from . import list_operators
+from . import main_panel
+# from . import icons  # TODO: Implement if needed
+
+# List of modules for registration
+_modules = [
+    ui_lists,
+    list_operators,
+    main_panel,
+]
+
 
 def register():
     """Register UI classes."""
-    # TODO: Register UI classes when created
-    pass
+    for module in _modules:
+        if hasattr(module, 'register'):
+            module.register()
 
 
 def unregister():
     """Unregister UI classes."""
-    # TODO: Unregister UI classes
-    pass
+    for module in reversed(_modules):
+        if hasattr(module, 'unregister'):
+            module.unregister()
