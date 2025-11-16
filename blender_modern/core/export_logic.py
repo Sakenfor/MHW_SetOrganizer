@@ -560,14 +560,15 @@ def batch_export(
     total_count = 0
     errors = []
 
-    for set_ref in batch_set.eobjs:
+    for set_ref in batch_set.sets:
         if not set_ref.export:
             continue
 
-        # Find export set by name
+        # Find export set by name (use export_set property or fall back to name)
+        set_name = set_ref.export_set or set_ref.name
         export_set = None
         for exp_set in mhw_data.export_sets:
-            if exp_set.name == set_ref.name:
+            if exp_set.name == set_name:
                 export_set = exp_set
                 break
 

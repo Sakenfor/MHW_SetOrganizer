@@ -269,8 +269,58 @@ class MHW_OT_RefreshExternalCTC(Operator):
     bl_options = {'REGISTER'}
 
     def execute(self, context):
-        # TODO: Implement external CTC refresh logic
-        self.report({'INFO'}, "External CTC sources refreshed")
+        from pathlib import Path
+        from .. import addon_config
+
+        mhw = context.scene.mhw_data
+
+        # Clear existing external sources
+        mhw.external_ctc_sources.clear()
+
+        source_count = 0
+
+        # Scan all blend append paths
+        for path_entry in mhw.blend_append_paths:
+            if not path_entry.path:
+                continue
+
+            blend_path = Path(path_entry.path)
+
+            # Handle both single files and directories
+            blend_files = []
+            if blend_path.is_file() and blend_path.suffix == '.blend':
+                blend_files = [blend_path]
+            elif blend_path.is_dir():
+                blend_files = list(blend_path.glob('*.blend'))
+            else:
+                continue
+
+            # Scan each blend file for CTC headers
+            for blend_file in blend_files:
+                try:
+                    # Use bpy.data.libraries to link objects temporarily
+                    with bpy.data.libraries.load(str(blend_file), link=True) as (data_from, data_to):
+                        # Check available objects
+                        if hasattr(data_from, 'objects'):
+                            for obj_name in data_from.objects:
+                                # We can't check custom properties when linking,
+                                # so we'll add all objects and let user filter
+                                # In practice, CTC headers usually have identifiable names
+                                if 'CTC' in obj_name.upper() or 'HEADER' in obj_name.upper():
+                                    source = mhw.external_ctc_sources.add()
+                                    source.name = f"{blend_file.stem}::{obj_name}"
+                                    source.blend = str(blend_file)
+                                    source.folder = obj_name
+                                    source_count += 1
+                except Exception as e:
+                    self.report({'WARNING'}, f"Could not read {blend_file.name}: {e}")
+                    continue
+
+        if source_count > 0:
+            self.report({'INFO'}, f"Found {source_count} external CTC source(s)")
+        else:
+            self.report({'WARNING'}, "No external CTC sources found")
+
         return {'FINISHED'}
 
 

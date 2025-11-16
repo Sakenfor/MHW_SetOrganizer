@@ -53,7 +53,7 @@ def update_export_path(self, context):
     batch_native_override = None
 
     if self.is_batch and len(mhw.batch_sets) > 0:
-        current_batch_index = mhw.batch_set_index
+        current_batch_index = mhw.active_batch_index
         if current_batch_index < len(mhw.batch_sets):
             batch_set = mhw.batch_sets[current_batch_index]
             if batch_set.use_sets_path:
@@ -148,9 +148,23 @@ class MHW_PG_ExportSetObject(PropertyGroup):
         default=True
     )
 
+    # Shorthand alias for UI
+    apply_sk: BoolProperty(
+        name="Apply Shape Key",
+        description="Apply shape key on export (alias)",
+        default=True
+    )
+
     shape_key_choice: StringProperty(
         name="Shape Key",
         description="Specific shape key to apply for this object",
+        default=""
+    )
+
+    # Shorthand alias for UI
+    key_choice: StringProperty(
+        name="Shape Key",
+        description="Specific shape key to apply for this object (alias)",
         default=""
     )
 
@@ -222,7 +236,7 @@ class MHW_PG_ExportSet(PropertyGroup):
         name="Export Objects"
     )
 
-    object_index: IntProperty(
+    active_object_index: IntProperty(
         name="Active Object Index",
         description="Currently selected object in the list",
         default=0
@@ -277,6 +291,14 @@ class MHW_PG_ExportSet(PropertyGroup):
     use_native_pc_structure: BoolProperty(
         name="Use Native PC Structure",
         description="Use the nativePC folder structure in export path",
+        default=True,
+        update=update_export_path
+    )
+
+    # Alias for UI compatibility
+    append_native_pc: BoolProperty(
+        name="Append Native PC",
+        description="Use the nativePC folder structure in export path (alias)",
         default=True,
         update=update_export_path
     )
@@ -508,12 +530,12 @@ class MHW_PG_ExportSet(PropertyGroup):
         default=True
     )
 
-    obj_view_mode: EnumProperty(
+    obj_views: EnumProperty(
         name="Object View Mode",
         description="What to display for each object",
         items=[
             ('NONE', "None", "No additional options"),
-            ('SHAPE_KEYS', "Shape Keys", "Show shape key options"),
+            ('SHAPE_KEY', "Shape Keys", "Show shape key options"),
             ('OTHER', "Other", "Show other options"),
         ],
         default='NONE'

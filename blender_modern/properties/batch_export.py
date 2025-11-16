@@ -28,6 +28,13 @@ class MHW_PG_SetOfSetsObject(PropertyGroup):
         default=""
     )
 
+    # Property for UI prop_search
+    export_set: StringProperty(
+        name="Export Set",
+        description="Name of the export set to include in batch",
+        default=""
+    )
+
     export: BoolProperty(
         name="Export",
         description="Include this set in batch export",
@@ -51,12 +58,12 @@ class MHW_PG_SetOfSets(PropertyGroup):
     )
 
     # Sets in this batch
-    eobjs: CollectionProperty(
+    sets: CollectionProperty(
         type=MHW_PG_SetOfSetsObject,
         name="Sets"
     )
 
-    object_index: IntProperty(
+    active_set_index: IntProperty(
         name="Active Set Index",
         description="Currently selected set in the list",
         default=0
@@ -66,6 +73,14 @@ class MHW_PG_SetOfSets(PropertyGroup):
     sets_path: StringProperty(
         name="Batch Export Path",
         description="Shared export path for all sets in this batch",
+        default="",
+        subtype='DIR_PATH'
+    )
+
+    # Alias for UI compatibility
+    export_path: StringProperty(
+        name="Export Path",
+        description="Shared export path for all sets in this batch (alias)",
         default="",
         subtype='DIR_PATH'
     )

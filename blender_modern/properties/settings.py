@@ -109,7 +109,7 @@ class MHW_PG_Settings(PropertyGroup):
         name="Export Sets"
     )
 
-    export_set_index: IntProperty(
+    active_export_set_index: IntProperty(
         name="Active Set Index",
         description="Currently selected export set",
         default=0
@@ -121,7 +121,7 @@ class MHW_PG_Settings(PropertyGroup):
         name="Batch Sets"
     )
 
-    batch_set_index: IntProperty(
+    active_batch_index: IntProperty(
         name="Active Batch Index",
         description="Currently selected batch set",
         default=0
@@ -170,15 +170,27 @@ class MHW_PG_Settings(PropertyGroup):
         default=False
     )
 
+    show_export_sets: BoolProperty(
+        name="Show Export Sets",
+        description="Show main export sets panel",
+        default=True
+    )
+
+    show_ctc_copier: BoolProperty(
+        name="Show CTC Copier",
+        description="Show CTC header copier panel",
+        default=False
+    )
+
     show_main_sets: BoolProperty(
         name="Show Main Sets",
-        description="Show main export sets panel",
+        description="Show main export sets panel (legacy name)",
         default=True
     )
 
     show_header_copy: BoolProperty(
         name="Show Header Copy",
-        description="Show CTC header copy panel",
+        description="Show CTC header copy panel (legacy name)",
         default=False
     )
 
@@ -195,16 +207,41 @@ class MHW_PG_Settings(PropertyGroup):
     )
 
     # ===== CTC Copy Settings =====
-    header_copy_prepend: StringProperty(
+    ctc_prepend_text: StringProperty(
         name="Prepend Text",
         description="Text to prepend to copied CTC object names",
         default=""
     )
 
-    header_new_names: StringProperty(
+    ctc_new_name: StringProperty(
         name="New Name",
         description="Base name for renamed CTC objects",
         default=""
+    )
+
+    ctc_type_prefix: BoolProperty(
+        name="Type Name Prefix",
+        description="Put object type before name instead of after",
+        default=False
+    )
+
+    # Legacy names (keep for backward compatibility)
+    header_copy_prepend: StringProperty(
+        name="Prepend Text (Legacy)",
+        description="Text to prepend to copied CTC object names (legacy property)",
+        default=""
+    )
+
+    header_new_names: StringProperty(
+        name="New Name (Legacy)",
+        description="Base name for renamed CTC objects (legacy property)",
+        default=""
+    )
+
+    type_name_prefix: BoolProperty(
+        name="Type Name Prefix (Legacy)",
+        description="Put object type before name instead of after (legacy property)",
+        default=False
     )
 
     ctc_copy_use_active: BoolProperty(
@@ -223,12 +260,6 @@ class MHW_PG_Settings(PropertyGroup):
         name="Add Vertex Groups",
         description="Create vertex groups for copied bones",
         default=True
-    )
-
-    type_name_prefix: BoolProperty(
-        name="Type Name Prefix",
-        description="Put object type before name instead of after",
-        default=False
     )
 
     # ===== Operator Properties =====
